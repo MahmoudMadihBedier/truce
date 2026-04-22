@@ -1,12 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:truce/core/utils/theme.dart';
+import 'package:truce/features/auth/presentation/auth_cubit.dart';
+import 'package:truce/features/auth/presentation/auth_dialog.dart';
 import 'package:truce/features/prices/domain/models.dart';
 import 'package:truce/features/prices/presentation/prices_cubit.dart';
 import 'package:truce/features/prices/presentation/product_details_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthAndShowPopup();
+    });
+  }
+
+  void _checkAuthAndShowPopup() {
+    final authCubit = context.read<AuthCubit>();
+    if (authCubit.state is AuthUnauthenticated || authCubit.state is AuthInitial) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AuthDialog(),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:truce/core/di/injection.dart' as di;
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
-import 'package:truce/features/auth/presentation/login_page.dart';
 import 'package:truce/features/prices/presentation/home_page.dart';
 import 'package:truce/features/prices/presentation/prices_cubit.dart';
 
@@ -35,14 +34,7 @@ class MyApp extends StatelessWidget {
         title: 'Truce Egypt',
         theme: TruceTheme.lightTheme,
         debugShowCheckedModeBanner: false,
-        home: BlocBuilder<AuthCubit, AuthState>(
-          builder: (context, state) {
-            if (state is AuthAuthenticated) {
-              return const HomePage();
-            }
-            return const LoginPage();
-          },
-        ),
+        home: const HomePage(), // Always start with HomePage
       ),
     );
   }

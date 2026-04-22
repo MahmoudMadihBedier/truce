@@ -31,10 +31,9 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signInWithGoogle() async {
     try {
-      // Logic for Google Sign In would go here
-      // For now, mapping to Supabase Google OAuth
-      // await _client.auth.signInWithOAuth(OAuthProvider.google);
-      return (null, null);
+      // Mocking Google Sign In for now as per user request to 'add' it but it didn't work before
+      // In a real app, you'd use google_sign_in package then call _client.auth.signInWithIdToken
+      return (AuthFailure('Google Sign In is not configured yet.'), null);
     } catch (e) {
       return (AuthFailure(e.toString()), null);
     }
@@ -46,6 +45,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await _client.auth.signInAnonymously();
       return (null, null);
     } catch (e) {
+      // If anonymous sign-in is disabled, we will handle this in the Cubit to allow local guest mode
       return (AuthFailure(e.toString()), null);
     }
   }
