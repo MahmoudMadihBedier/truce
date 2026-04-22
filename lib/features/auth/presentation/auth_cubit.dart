@@ -51,8 +51,12 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     final (failure, _) = await _repository.signInAsGuest();
     if (failure != null) {
-      // If the server fails (e.g. anonymous provider disabled), we still allow them to enter as a local guest
-      emit(AuthGuest());
+      // Specifically check for disabled anonymous provider
+      if (failure.message.contains('anonymous_provider_disabled')) {
+         emit(AuthGuest());
+      } else {
+         emit(AuthError(failure.message));
+      }
     } else {
       emit(AuthAuthenticated());
     }
