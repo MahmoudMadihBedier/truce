@@ -16,59 +16,59 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
-      // 1. Fetch products from GS1 Egypt API
+      // 1. Fetch products from GS1 Egypt API with validation
       final gs1Response = await _httpClient.get(
         Uri.parse('http://private-anon-b59c34f288-gs1egyptproducts.apiary-mock.com/products'),
-      );
+      ).timeout(const Duration(seconds: 10));
 
       List<Product> products = [];
 
       if (gs1Response.statusCode == 200) {
         final gs1Data = json.decode(gs1Response.body);
-        final gs1Products = gs1Data['products'] as List<dynamic>;
+        if (gs1Data is Map && gs1Data.containsKey('products')) {
+          final gs1Products = gs1Data['products'] as List<dynamic>;
 
-        products = gs1Products.map((item) {
-          final productName = item['productName']['value'] ?? 'Unknown Product';
-          final description = item['consumerMarketingDescription']['value'];
-          final imageUrl = (item['photos']['value'] as List<dynamic>).isNotEmpty
-              ? item['photos']['value'][0]
-              : null;
+          products = gs1Products.map((item) {
+            final productName = item['productName']?['value'] ?? 'Unknown Product';
+            final description = item['consumerMarketingDescription']?['value'];
+            final photos = item['photos']?['value'];
+            final imageUrl = (photos is List && photos.isNotEmpty) ? photos[0] : null;
 
-          // For demonstration, we'll add random prices from Egyptian stores
-          final random = Random();
-          final basePrice = 20.0 + random.nextInt(100);
+            final random = Random();
+            final basePrice = 20.0 + random.nextInt(100);
 
-          return Product(
-            id: random.nextInt(10000),
-            nameEn: productName,
-            nameAr: productName, // Mocking AR name as the same since API only gives one
-            descriptionEn: description,
-            descriptionAr: description,
-            imageUrl: imageUrl,
-            prices: [
-              ProductPrice(
-                id: 1,
-                price: basePrice,
-                storeNameEn: 'Amazon Egypt',
-                storeNameAr: 'أمازون مصر',
-                storeRating: 4.5,
-                isAvailable: true,
-              ),
-              ProductPrice(
-                id: 2,
-                price: basePrice - 2.5,
-                storeNameEn: 'Noon',
-                storeNameAr: 'نون',
-                storeRating: 4.2,
-                isAvailable: true,
-              ),
-            ]..sort((a, b) => a.price.compareTo(b.price)),
-          );
-        }).toList();
+            return Product(
+              id: random.nextInt(10000),
+              nameEn: productName,
+              nameAr: productName,
+              descriptionEn: description,
+              descriptionAr: description,
+              imageUrl: imageUrl,
+              prices: [
+                ProductPrice(
+                  id: 1,
+                  price: basePrice,
+                  storeNameEn: 'Amazon Egypt',
+                  storeNameAr: 'أمازون مصر',
+                  storeRating: 4.5,
+                  isAvailable: true,
+                ),
+                ProductPrice(
+                  id: 2,
+                  price: max(5.0, basePrice - 2.5),
+                  storeNameEn: 'Noon',
+                  storeNameAr: 'نون',
+                  storeRating: 4.2,
+                  isAvailable: true,
+                ),
+              ]..sort((a, b) => a.price.compareTo(b.price)),
+            );
+          }).toList();
+        }
       }
 
-      // 2. Fetch from Supabase as well
-      final supabaseRequest = _client.from('products').select('''
+      // 2. Fetch from Supabase
+      final supabaseResponse = await _client.from('products').select('''
         *,
         product_prices (
           price,
@@ -81,7 +81,6 @@ class PricesRepositoryImpl implements PricesRepository {
         )
       ''');
 
-      final supabaseResponse = await supabaseRequest;
       final supabaseData = supabaseResponse as List<dynamic>;
 
       final supabaseProducts = supabaseData.map((item) {
@@ -91,10 +90,10 @@ class PricesRepositoryImpl implements PricesRepository {
           return ProductPrice(
             id: 0,
             price: (p['price'] as num).toDouble(),
-            storeNameEn: store['name_en'],
-            storeNameAr: store['name_ar'],
-            storeRating: (store['rating'] as num).toDouble(),
-            isAvailable: p['is_available'],
+            storeNameEn: store['name_en'] ?? 'Unknown',
+            storeNameAr: store['name_ar'] ?? 'غير معروف',
+            storeRating: (store['rating'] as num? ?? 0.0).toDouble(),
+            isAvailable: p['is_available'] ?? true,
           );
         }).toList();
 
@@ -113,7 +112,7 @@ class PricesRepositoryImpl implements PricesRepository {
 
       return (null, [...products, ...supabaseProducts]);
     } catch (e) {
-      return (ServerFailure(e.toString()), null);
+      return (ServerFailure('Failed to fetch products: ${e.toString()}'), null);
     }
   }
 
@@ -132,41 +131,34 @@ class PricesRepositoryImpl implements PricesRepository {
       }
 
       return (null, data.map((item) => GoldPrice(
-        carat: item['carat'],
-        buy: (item['price_buy'] as num).toDouble(),
-        sell: (item['price_sell'] as num).toDouble(),
-        updatedAt: DateTime.parse(item['updated_at']),
+        carat: item['carat'] ?? '?',
+        buy: (item['price_buy'] as num? ?? 0).toDouble(),
+        sell: (item['price_sell'] as num? ?? 0).toDouble(),
+        updatedAt: DateTime.tryParse(item['updated_at'] ?? '') ?? DateTime.now(),
       )).toList());
     } catch (e) {
-      return (ServerFailure(e.toString()), null);
+      return (ServerFailure('Gold price data error: ${e.toString()}'), null);
     }
   }
 
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
     try {
-      // Fetch USD/EGP from Metal Price API
       const url = 'https://api.metalpriceapi.com/v1/latest?api_key=b819b9d518eef61ac6a58d3ac63ae402&base=USD&currencies=EGP';
-      final response = await _httpClient.get(Uri.parse(url));
+      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['success'] == true) {
+        if (data is Map && data['success'] == true && data['rates']?['EGP'] != null) {
           final egpRate = (data['rates']['EGP'] as num).toDouble();
           return (null, [
             CurrencyRate(code: 'USD', rateToEgp: egpRate, updatedAt: DateTime.now()),
           ]);
         }
       }
-
-      // Fallback
-      return (null, [
-        CurrencyRate(code: 'USD', rateToEgp: 48.50, updatedAt: DateTime.now()),
-      ]);
+      return (null, [CurrencyRate(code: 'USD', rateToEgp: 48.50, updatedAt: DateTime.now())]);
     } catch (e) {
-      return (null, [
-        CurrencyRate(code: 'USD', rateToEgp: 48.50, updatedAt: DateTime.now()),
-      ]);
+      return (null, [CurrencyRate(code: 'USD', rateToEgp: 48.50, updatedAt: DateTime.now())]);
     }
   }
 }
