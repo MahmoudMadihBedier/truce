@@ -58,49 +58,53 @@ class _HomePageState extends State<HomePage> {
           if (state is PricesLoading) return const Center(child: CircularProgressIndicator());
           if (state is PricesError) return Center(child: Text(state.message));
           if (state is PricesLoaded) {
-            return CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  pinned: true,
-                  expandedHeight: 120,
-                  flexibleSpace: FlexibleSpaceBar(
-                    title: const Text('Truce Egypt', style: TextStyle(color: TruceTheme.primary)),
-                    background: Container(color: TruceTheme.background),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: _buildPriceTicker(state.goldPrices, state.currencyRates),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: SearchBar(
-                      hintText: 'Search products... | ابحث عن المنتجات',
-                      leading: const Icon(Icons.search),
-                      elevation: WidgetStateProperty.all(0),
-                      backgroundColor: WidgetStateProperty.all(Colors.white),
+            return RefreshIndicator(
+              onRefresh: () => context.read<PricesCubit>().loadDashboard(),
+              child: CustomScrollView(
+                slivers: [
+                  SliverAppBar(
+                    pinned: true,
+                    expandedHeight: 120,
+                    flexibleSpace: FlexibleSpaceBar(
+                      title: const Text('Truce Egypt', style: TextStyle(color: TruceTheme.primary)),
+                      background: Container(color: TruceTheme.background),
                     ),
                   ),
-                ),
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text(
-                      'Price Drops | انخفاض الأسعار',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                  SliverToBoxAdapter(
+                    child: _buildPriceTicker(state.goldPrices, state.currencyRates),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: SearchBar(
+                        hintText: 'Search products... | ابحث عن المنتجات',
+                        leading: const Icon(Icons.search),
+                        onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
+                        elevation: WidgetStateProperty.all(0),
+                        backgroundColor: WidgetStateProperty.all(Colors.white),
+                      ),
                     ),
                   ),
-                ),
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final product = state.products[index];
-                      return _buildProductCard(context, product);
-                    },
-                    childCount: state.products.length,
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Text(
+                        'Market Products | منتجات السوق',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final product = state.products[index];
+                        return _buildProductCard(context, product);
+                      },
+                      childCount: state.products.length,
+                    ),
+                  ),
+                ],
+              ),
             );
           }
           return const SizedBox();
@@ -118,19 +122,19 @@ class _HomePageState extends State<HomePage> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          for (var g in gold)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(
-                'Gold ${g.carat}: ${g.sell} EGP',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-              ),
-            ),
           for (var c in currency)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Text(
                 '${c.code}/EGP: ${c.rateToEgp}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          for (var g in gold)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                'Gold ${g.carat}: ${g.sell} EGP',
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
               ),
             ),
@@ -156,10 +160,12 @@ class _HomePageState extends State<HomePage> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.image_outlined, color: Colors.grey),
+                child: product.imageUrl != null
+                    ? Image.network(product.imageUrl!, fit: BoxFit.contain)
+                    : const Icon(Icons.image_outlined, color: Colors.grey),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -167,8 +173,10 @@ class _HomePageState extends State<HomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${product.nameEn} | ${product.nameAr}',
+                      product.nameEn,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (lowestPrice != null) ...[
                       const SizedBox(height: 4),
