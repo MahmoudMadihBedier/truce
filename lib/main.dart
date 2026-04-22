@@ -6,6 +6,7 @@ import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/prices/presentation/home_page.dart';
 import 'package:truce/features/prices/presentation/prices_cubit.dart';
+import 'package:truce/features/settings/presentation/settings_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,12 +30,20 @@ class MyApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (context) => di.sl<AuthCubit>()),
         BlocProvider(create: (context) => di.sl<PricesCubit>()),
+        BlocProvider(create: (context) => di.sl<SettingsCubit>()),
       ],
-      child: MaterialApp(
-        title: 'Truce Egypt',
-        theme: TruceTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        home: const HomePage(), // Always start with HomePage
+      child: BlocBuilder<SettingsCubit, SettingsState>(
+        builder: (context, settings) {
+          return MaterialApp(
+            title: 'Truce Egypt',
+            theme: TruceTheme.lightTheme,
+            darkTheme: TruceTheme.darkTheme,
+            themeMode: settings.themeMode,
+            locale: settings.locale,
+            debugShowCheckedModeBanner: false,
+            home: const HomePage(),
+          );
+        },
       ),
     );
   }

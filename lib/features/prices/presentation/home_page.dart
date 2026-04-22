@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:truce/core/utils/local_strings.dart';
+import 'package:truce/core/utils/marquee_ticker.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/auth/presentation/auth_dialog.dart';
 import 'package:truce/features/prices/domain/models.dart';
+import 'package:truce/features/prices/presentation/market_rates_page.dart';
 import 'package:truce/features/prices/presentation/prices_cubit.dart';
 import 'package:truce/features/prices/presentation/product_details_page.dart';
+import 'package:truce/features/settings/presentation/settings_cubit.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -36,18 +40,27 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<SettingsCubit>().state.locale.languageCode;
+
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
-        selectedItemColor: TruceTheme.primary,
+        selectedItemColor: TruceTheme.accentGreen,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
           BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
+        onTap: (index) {
+          if (index == 3) {
+             context.read<SettingsCubit>().toggleTheme();
+             final newLocale = locale == 'en' ? 'ar' : 'en';
+             context.read<SettingsCubit>().setLocale(newLocale);
+          }
+        },
       ),
       body: BlocBuilder<PricesCubit, PricesState>(
         builder: (context, state) {
@@ -64,33 +77,42 @@ class _HomePageState extends State<HomePage> {
                 slivers: [
                   SliverAppBar(
                     pinned: true,
-                    expandedHeight: 120,
-                    flexibleSpace: FlexibleSpaceBar(
-                      title: const Text('Truce Egypt', style: TextStyle(color: TruceTheme.primary)),
-                      background: Container(color: TruceTheme.background),
-                    ),
+                    title: Text(LocalStrings.get('app_title', locale)),
                   ),
                   SliverToBoxAdapter(
-                    child: _buildPriceTicker(state.goldPrices, state.currencyRates),
+                    child: MarqueeTicker(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MarketRatesPage())),
+                      children: [
+                        for (var c in state.currencyRates)
+                          Text(
+                            '${LocalStrings.get('usd_egp', locale)}: ${c.rateToEgp}',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        for (var g in state.goldPrices)
+                          Text(
+                            '${LocalStrings.get('gold', locale)} ${g.carat}: ${g.sell} EGP',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                          ),
+                      ],
+                    ),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: SearchBar(
-                        hintText: 'Search products... | ابحث عن المنتجات',
+                        hintText: LocalStrings.get('search_hint', locale),
                         leading: const Icon(Icons.search),
                         onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
                         elevation: WidgetStateProperty.all(0),
-                        backgroundColor: WidgetStateProperty.all(Colors.white),
                       ),
                     ),
                   ),
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Text(
-                        'Market Products | منتجات السوق',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                        LocalStrings.get('market_products', locale),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -98,7 +120,7 @@ class _HomePageState extends State<HomePage> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final product = state.products[index];
-                        return _buildProductCard(context, product);
+                        return _buildProductCard(context, product, locale);
                       },
                       childCount: state.products.length,
                     ),
@@ -113,37 +135,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPriceTicker(List<GoldPrice> gold, List<CurrencyRate> currency) {
-    return Container(
-      height: 40,
-      decoration: const BoxDecoration(
-        color: TruceTheme.primary,
-      ),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          for (var c in currency)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(
-                '${c.code}/EGP: ${c.rateToEgp}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          for (var g in gold)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(
-                'Gold ${g.carat}: ${g.sell} EGP',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductCard(BuildContext context, Product product) {
+  Widget _buildProductCard(BuildContext context, Product product, String locale) {
     final lowestPrice = product.prices.isNotEmpty ? product.prices.first : null;
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -173,7 +165,7 @@ class _HomePageState extends State<HomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      product.nameEn,
+                      locale == 'ar' ? product.nameAr : product.nameEn,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -181,11 +173,11 @@ class _HomePageState extends State<HomePage> {
                     if (lowestPrice != null) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Lowest: EGP ${lowestPrice.price}',
+                        '${LocalStrings.get('lowest', locale)}: EGP ${lowestPrice.price}',
                         style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        'at ${lowestPrice.storeNameEn}',
+                        '${LocalStrings.get('at', locale)} ${locale == 'ar' ? lowestPrice.storeNameAr : lowestPrice.storeNameEn}',
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ] else
