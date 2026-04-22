@@ -40,12 +40,12 @@ void main() {
     cubit = AuthCubit(repo);
   });
 
-  test('initial state is Unauthenticated if repo is not authenticated', () {
+  test('initial state is AuthUnauthenticated if repo is not authenticated', () {
     expect(cubit.state, isA<AuthUnauthenticated>());
   });
 
-  test('signInAsGuest emits Authenticated', () async {
-    await cubit.signInAsGuest();
+  test('continueAsGuest emits AuthAuthenticated', () async {
+    await cubit.continueAsGuest();
     expect(cubit.state, isA<AuthAuthenticated>());
   });
 }

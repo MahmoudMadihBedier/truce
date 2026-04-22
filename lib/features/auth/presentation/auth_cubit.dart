@@ -5,6 +5,7 @@ sealed class AuthState {}
 class AuthInitial extends AuthState {}
 class AuthLoading extends AuthState {}
 class AuthAuthenticated extends AuthState {}
+class AuthGuest extends AuthState {}
 class AuthUnauthenticated extends AuthState {}
 class AuthError extends AuthState {
   final String message;
@@ -36,11 +37,22 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  Future<void> signInAsGuest() async {
+  Future<void> signUp(String email, String password) async {
+    emit(AuthLoading());
+    final (failure, _) = await _repository.signUpWithEmail(email, password);
+    if (failure != null) {
+      emit(AuthError(failure.message));
+    } else {
+      emit(AuthAuthenticated());
+    }
+  }
+
+  Future<void> continueAsGuest() async {
     emit(AuthLoading());
     final (failure, _) = await _repository.signInAsGuest();
     if (failure != null) {
-      emit(AuthError(failure.message));
+      // If the server fails (e.g. anonymous provider disabled), we still allow them to enter as a local guest
+      emit(AuthGuest());
     } else {
       emit(AuthAuthenticated());
     }

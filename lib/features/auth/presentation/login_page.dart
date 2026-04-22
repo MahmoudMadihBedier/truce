@@ -70,7 +70,7 @@ class LoginPage extends StatelessWidget {
                   ),
                   const Spacer(),
                   TextButton(
-                    onPressed: () => context.read<AuthCubit>().signInAsGuest(),
+                    onPressed: () => context.read<AuthCubit>().continueAsGuest(),
                     child: const Text(
                       'Continue as Guest | متابعة كضيف',
                       style: TextStyle(color: TruceTheme.primaryContainer),
