@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:truce/core/di/injection.dart' as di;
+import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/auth/presentation/login_page.dart';
 import 'package:truce/features/prices/presentation/home_page.dart';
@@ -32,10 +33,8 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Truce Egypt',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D2B45)),
-          useMaterial3: true,
-        ),
+        theme: TruceTheme.lightTheme,
+        debugShowCheckedModeBanner: false,
         home: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
             if (state is AuthAuthenticated) {
