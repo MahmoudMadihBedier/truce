@@ -74,7 +74,7 @@ class _AuthDialogState extends State<AuthDialog> {
                 ),
                 const Divider(),
                 OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => context.read<AuthCubit>().signInWithGoogle(),
                   icon: const Icon(Icons.g_mobiledata),
                   label: const Text('Continue with Google'),
                 ),
