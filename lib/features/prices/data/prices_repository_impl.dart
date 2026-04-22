@@ -16,7 +16,6 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
-      // 1. Fetch products from GS1 Egypt API with validation
       final gs1Response = await _httpClient.get(
         Uri.parse('http://private-anon-b59c34f288-gs1egyptproducts.apiary-mock.com/products'),
       ).timeout(const Duration(seconds: 10));
@@ -67,7 +66,6 @@ class PricesRepositoryImpl implements PricesRepository {
         }
       }
 
-      // 2. Fetch from Supabase
       final supabaseResponse = await _client.from('products').select('''
         *,
         product_prices (
@@ -119,33 +117,37 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
     try {
-      final response = await _client.from('gold_prices').select();
-      final data = response as List<dynamic>;
+      const apiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
+      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$apiKey&base=XAU&currencies=EGP';
+      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
 
-      if (data.isEmpty) {
-        return (null, [
-          GoldPrice(carat: '24K', buy: 3450, sell: 3500, updatedAt: DateTime.now()),
-          GoldPrice(carat: '21K', buy: 3020, sell: 3060, updatedAt: DateTime.now()),
-          GoldPrice(carat: '18K', buy: 2588, sell: 2623, updatedAt: DateTime.now()),
-        ]);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          final pricePerOunce = (data['rates']['EGP'] as num).toDouble();
+          final pricePerGram24K = pricePerOunce / 31.1034768;
+          final pricePerGram21K = pricePerGram24K * (21/24);
+          final pricePerGram18K = pricePerGram24K * (18/24);
+
+          return (null, [
+            GoldPrice(carat: '24K', buy: pricePerGram24K - 10, sell: pricePerGram24K, updatedAt: DateTime.now()),
+            GoldPrice(carat: '21K', buy: pricePerGram21K - 10, sell: pricePerGram21K, updatedAt: DateTime.now()),
+            GoldPrice(carat: '18K', buy: pricePerGram18K - 10, sell: pricePerGram18K, updatedAt: DateTime.now()),
+          ]);
+        }
       }
-
-      return (null, data.map((item) => GoldPrice(
-        carat: item['carat'] ?? '?',
-        buy: (item['price_buy'] as num? ?? 0).toDouble(),
-        sell: (item['price_sell'] as num? ?? 0).toDouble(),
-        updatedAt: DateTime.tryParse(item['updated_at'] ?? '') ?? DateTime.now(),
-      )).toList());
+      return (ServerFailure('Failed to fetch gold prices from API'), null);
     } catch (e) {
-      return (ServerFailure('Gold price data error: ${e.toString()}'), null);
+      return (ServerFailure('Gold price error: ${e.toString()}'), null);
     }
   }
 
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
     try {
-      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=b819b9d518eef61ac6a58d3ac63ae402&base=USD&currencies=EGP';
-      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
+      const apiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
+      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$apiKey&base=USD&currencies=EGP';
+      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

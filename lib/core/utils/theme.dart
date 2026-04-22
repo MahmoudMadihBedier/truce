@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class TruceTheme {
   static const Color primary = Color(0xFF00162A);
@@ -14,6 +15,10 @@ class TruceTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      textTheme: GoogleFonts.interTextTheme().copyWith(
+        displayLarge: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+        headlineMedium: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+      ),
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
         primary: primary,
@@ -23,15 +28,14 @@ class TruceTheme {
         surface: backgroundLight,
       ),
       scaffoldBackgroundColor: backgroundLight,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.manrope(
           color: primary,
           fontSize: 24,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Manrope',
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -57,6 +61,10 @@ class TruceTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
+        displayLarge: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: Colors.white),
+        headlineMedium: GoogleFonts.manrope(fontWeight: FontWeight.bold, color: Colors.white),
+      ),
       colorScheme: ColorScheme.fromSeed(
         seedColor: primary,
         brightness: Brightness.dark,
@@ -67,15 +75,14 @@ class TruceTheme {
         surface: backgroundDark,
       ),
       scaffoldBackgroundColor: backgroundDark,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.manrope(
           color: Colors.white,
           fontSize: 24,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Manrope',
         ),
       ),
       cardTheme: CardThemeData(

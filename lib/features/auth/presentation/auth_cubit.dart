@@ -51,7 +51,6 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     final (failure, _) = await _repository.signInAsGuest();
     if (failure != null) {
-      // Specifically check for disabled anonymous provider
       if (failure.message.contains('anonymous_provider_disabled')) {
          emit(AuthGuest());
       } else {
@@ -59,6 +58,14 @@ class AuthCubit extends Cubit<AuthState> {
       }
     } else {
       emit(AuthAuthenticated());
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    emit(AuthLoading());
+    final (failure, _) = await _repository.signInWithGoogle();
+    if (failure != null) {
+      emit(AuthError(failure.message));
     }
   }
 
