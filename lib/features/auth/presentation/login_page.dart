@@ -25,8 +25,16 @@ class LoginPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 60),
+                  Center(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      height: 120,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   const Text(
                     'Truce',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
@@ -36,6 +44,7 @@ class LoginPage extends StatelessWidget {
                   ),
                   const Text(
                     'Track daily prices for groceries, gold, and more in Egypt.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 48),
@@ -60,7 +69,7 @@ class LoginPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: () => context.read<AuthCubit>().signInWithGoogle(),
                     icon: const Icon(Icons.g_mobiledata, size: 30),
                     label: const Text('Continue with Google'),
                     style: OutlinedButton.styleFrom(

@@ -90,7 +90,13 @@ class _HomeContent extends StatelessWidget {
               slivers: [
                 SliverAppBar(
                   pinned: true,
-                  title: Text(LocalStrings.get('app_title', locale)),
+                  title: Row(
+                    children: [
+                      Image.asset('assets/images/logo.png', height: 32),
+                      const SizedBox(width: 8),
+                      Text(LocalStrings.get('app_title', locale)),
+                    ],
+                  ),
                 ),
                 SliverToBoxAdapter(
                   child: MarqueeTicker(
@@ -103,7 +109,7 @@ class _HomeContent extends StatelessWidget {
                         ),
                       for (var g in state.goldPrices)
                         Text(
-                          '${LocalStrings.get('gold', locale)} ${g.carat}: ${g.sell} EGP',
+                          '${LocalStrings.get('gold', locale)} ${g.carat}: ${g.sell.toStringAsFixed(2)} EGP',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
                         ),
                     ],
