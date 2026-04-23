@@ -41,6 +41,8 @@ class _AuthDialogState extends State<AuthDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(child: Image.asset('assets/images/logo.png', height: 60)),
+                const SizedBox(height: 16),
                 Text(
                   isLogin ? 'Login | تسجيل الدخول' : 'Sign Up | إنشاء حساب',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TruceTheme.primary),
