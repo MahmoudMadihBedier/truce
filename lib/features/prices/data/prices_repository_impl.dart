@@ -16,18 +16,58 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
+      List<Product> allProducts = [];
+      const pricesApiKey = 'pricesapi_dinvnlz4Hs3y4DPMN5VT6ZABZpxoOHX';
+
+      // 1. Fetch from PricesAPI.io
+      final searchTerm = query ?? 'iphone';
+      final pricesApiResponse = await _httpClient.get(
+        Uri.parse('https://api.pricesapi.io/api/v1/products/search?q=$searchTerm&country=eg&limit=10'),
+        headers: {'x-api-key': pricesApiKey},
+      ).timeout(const Duration(seconds: 15));
+
+      if (pricesApiResponse.statusCode == 200) {
+        final data = json.decode(pricesApiResponse.body);
+        if (data['success'] == true && data['products'] != null) {
+          final items = data['products'] as List<dynamic>;
+          allProducts.addAll(items.map((item) {
+            final random = Random();
+            final price = (item['price'] as num? ?? 0.0).toDouble();
+
+            return Product(
+              id: random.nextInt(100000),
+              nameEn: item['title'] ?? 'Product',
+              nameAr: item['title'] ?? 'منتج',
+              imageUrl: item['image_url'],
+              prices: [
+                ProductPrice(
+                  id: 0,
+                  price: price,
+                  previousPrice: price > 0 ? price * 1.1 : null,
+                  storeNameEn: item['store_name'] ?? 'Market',
+                  storeNameAr: item['store_name'] ?? 'سوق',
+                  storeRating: 4.0,
+                  isAvailable: true,
+                  productUrl: item['url'],
+                  discountInfo: 'PricesAPI Deal',
+                )
+              ],
+            );
+          }));
+        }
+      }
+
+      // 2. Fetch from GS1 Egypt API (Mock)
       final gs1Response = await _httpClient.get(
         Uri.parse('http://private-anon-b59c34f288-gs1egyptproducts.apiary-mock.com/products'),
       ).timeout(const Duration(seconds: 10));
-
-      List<Product> products = [];
 
       if (gs1Response.statusCode == 200) {
         final gs1Data = json.decode(gs1Response.body);
         if (gs1Data is Map && gs1Data.containsKey('products')) {
           final gs1Products = gs1Data['products'] as List<dynamic>;
 
-          products = gs1Products.map((item) {
+          allProducts.addAll(gs1Products.map((item) {
             final productName = item['productName']?['value'] ?? 'Unknown Product';
             final description = item['consumerMarketingDescription']?['value'];
             final photos = item['photos']?['value'];
@@ -62,10 +102,11 @@ class PricesRepositoryImpl implements PricesRepository {
                 ),
               ]..sort((a, b) => a.price.compareTo(b.price)),
             );
-          }).toList();
+          }));
         }
       }
 
+      // 3. Fetch from Supabase
       final supabaseResponse = await _client.from('products').select('''
         *,
         product_prices (
@@ -81,7 +122,7 @@ class PricesRepositoryImpl implements PricesRepository {
 
       final supabaseData = supabaseResponse as List<dynamic>;
 
-      final supabaseProducts = supabaseData.map((item) {
+      allProducts.addAll(supabaseData.map((item) {
         final product = Product.fromJson(item);
         final prices = (item['product_prices'] as List<dynamic>).map((p) {
           final store = p['stores'];
@@ -106,9 +147,9 @@ class PricesRepositoryImpl implements PricesRepository {
           imageUrl: product.imageUrl,
           prices: prices,
         );
-      }).toList();
+      }));
 
-      return (null, [...products, ...supabaseProducts]);
+      return (null, allProducts);
     } catch (e) {
       return (ServerFailure('Failed to fetch products: ${e.toString()}'), null);
     }
@@ -117,8 +158,8 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
     try {
-      const apiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
-      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$apiKey&base=XAU&currencies=EGP';
+      const metalApiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
+      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$metalApiKey&base=XAU&currencies=EGP';
       final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -145,8 +186,8 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
     try {
-      const apiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
-      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$apiKey&base=USD&currencies=EGP';
+      const metalApiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
+      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$metalApiKey&base=USD&currencies=EGP';
       final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {

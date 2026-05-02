@@ -32,18 +32,24 @@ class Product {
 class ProductPrice {
   final int id;
   final double price;
+  final double? previousPrice;
   final String storeNameEn;
   final String storeNameAr;
   final double storeRating;
   final bool isAvailable;
+  final String? productUrl;
+  final String? discountInfo;
 
   ProductPrice({
     required this.id,
     required this.price,
+    this.previousPrice,
     required this.storeNameEn,
     required this.storeNameAr,
     required this.storeRating,
     required this.isAvailable,
+    this.productUrl,
+    this.discountInfo,
   });
 }
 
@@ -51,13 +57,13 @@ class GoldPrice {
   final String carat;
   final double buy;
   final double sell;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
 
-  GoldPrice({
+  const GoldPrice({
     required this.carat,
     required this.buy,
     required this.sell,
-    required this.updatedAt,
+    this.updatedAt,
   });
 }
 
@@ -66,7 +72,7 @@ class CurrencyRate {
   final double rateToEgp;
   final DateTime updatedAt;
 
-  CurrencyRate({
+  const CurrencyRate({
     required this.code,
     required this.rateToEgp,
     required this.updatedAt,

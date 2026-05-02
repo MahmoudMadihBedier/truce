@@ -173,8 +173,9 @@ class _HomeContent extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: product.imageUrl != null
-                    ? Image.network(product.imageUrl!, fit: BoxFit.contain)
+                child: (product.imageUrl != null && product.imageUrl!.startsWith('http'))
+                    ? Image.network(product.imageUrl!, fit: BoxFit.contain,
+                        errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey))
                     : const Icon(Icons.image_outlined, color: Colors.grey),
               ),
               const SizedBox(width: 16),
@@ -185,14 +186,26 @@ class _HomeContent extends StatelessWidget {
                     Text(
                       locale == 'ar' ? product.nameAr : product.nameEn,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (lowestPrice != null) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        '${LocalStrings.get('lowest', locale)}: EGP ${lowestPrice.price}',
-                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          if (lowestPrice.previousPrice != null)
+                             Padding(
+                               padding: const EdgeInsets.only(right: 8.0),
+                               child: Text(
+                                 'EGP ${lowestPrice.previousPrice!.toStringAsFixed(2)}',
+                                 style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 10),
+                               ),
+                             ),
+                          Text(
+                            '${LocalStrings.get('lowest', locale)}: EGP ${lowestPrice.price.toStringAsFixed(2)}',
+                            style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                       Text(
                         '${LocalStrings.get('at', locale)} ${locale == 'ar' ? lowestPrice.storeNameAr : lowestPrice.storeNameEn}',
