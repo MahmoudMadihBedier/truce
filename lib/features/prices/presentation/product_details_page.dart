@@ -8,7 +8,8 @@ class ProductDetailsPage extends StatelessWidget {
   const ProductDetailsPage({super.key, required this.product});
 
   Future<void> _launchUrl(String url) async {
-    if (!await launchUrl(Uri.parse(url))) {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       throw Exception('Could not launch $url');
     }
   }
@@ -25,13 +26,35 @@ class ProductDetailsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              height: 250,
+              height: 300,
               width: double.infinity,
               color: Colors.white,
-              child: product.imageUrl != null
-                  ? Image.network(product.imageUrl!, fit: BoxFit.contain,
-                      errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey))
-                  : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
+              child: Stack(
+                children: [
+                   Center(
+                     child: product.imageUrl != null
+                        ? Image.network(product.imageUrl!, fit: BoxFit.contain,
+                            errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey))
+                        : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
+                   ),
+                   if (product.prices.isNotEmpty && product.prices.first.discountInfo != null)
+                      Positioned(
+                        top: 20,
+                        right: 20,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            product.prices.first.discountInfo!,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(20.0),
@@ -42,18 +65,28 @@ class ProductDetailsPage extends StatelessWidget {
                     product.nameEn,
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    product.descriptionEn ?? 'No description available.',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
+                  const SizedBox(height: 12),
+                  if (product.descriptionEn != null) ...[
+                    const Text(
+                      'Description | الوصف',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      product.descriptionEn!,
+                      style: TextStyle(color: Colors.grey[700], height: 1.5),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   const Text(
-                    'Price Comparison | مقارنة الأسعار',
+                    'Best Offer | أفضل عرض',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                   ),
                   const SizedBox(height: 12),
-                  ...product.prices.map((p) => _buildStorePriceTile(p)),
+                  if (product.prices.isEmpty)
+                    const Center(child: Text('Price Currently N/A'))
+                  else
+                    ...product.prices.map((p) => _buildStorePriceTile(context, p)),
                 ],
               ),
             ),
@@ -63,13 +96,14 @@ class ProductDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStorePriceTile(ProductPrice price) {
+  Widget _buildStorePriceTile(BuildContext context, ProductPrice price) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
         ],
@@ -82,26 +116,28 @@ class ProductDetailsPage extends StatelessWidget {
               children: [
                 Text(
                   price.storeNameEn,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: TruceTheme.primary),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: TruceTheme.primary),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 14),
+                    const Icon(Icons.star, color: Colors.amber, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       price.storeRating.toString(),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      price.isAvailable ? 'In Stock' : 'Out of Stock',
+                      style: TextStyle(
+                        color: price.isAvailable ? Colors.green : Colors.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold
+                      ),
                     ),
                   ],
                 ),
-                if (price.discountInfo != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: TruceTheme.accentGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                    child: Text(price.discountInfo!, style: const TextStyle(color: TruceTheme.accentGreen, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
               ],
             ),
           ),
@@ -111,27 +147,27 @@ class ProductDetailsPage extends StatelessWidget {
               if (price.previousPrice != null)
                 Text(
                   'EGP ${price.previousPrice!.toStringAsFixed(2)}',
-                  style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 12),
+                  style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 14),
                 ),
               Text(
                 'EGP ${price.price.toStringAsFixed(2)}',
                 style: const TextStyle(
                   color: TruceTheme.accentGreen,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 22,
                 ),
               ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: price.productUrl != null ? () => _launchUrl(price.productUrl!) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: TruceTheme.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(100, 36),
+                ),
+                child: const Text('Visit Store'),
+              ),
             ],
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: price.productUrl != null ? () => _launchUrl(price.productUrl!) : null,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              backgroundColor: TruceTheme.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Visit'),
           ),
         ],
       ),

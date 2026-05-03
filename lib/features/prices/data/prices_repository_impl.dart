@@ -17,51 +17,11 @@ class PricesRepositoryImpl implements PricesRepository {
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
       List<Product> allProducts = [];
-      const pricesApiKey = 'pricesapi_dinvnlz4Hs3y4DPMN5VT6ZABZpxoOHX';
 
-      // 1. Fetch from PricesAPI.io
-      final searchTerm = query ?? 'iphone';
-      try {
-        // We try Egypt first, but since it often returns empty, we might fallback to Global/US or just show others.
-        // For this task, we'll try to handle the structure correctly.
-        final pricesApiResponse = await _httpClient.get(
-          Uri.parse('https://api.pricesapi.io/api/v1/products/search?q=$searchTerm&country=eg&limit=10'),
-          headers: {'x-api-key': pricesApiKey},
-        ).timeout(const Duration(seconds: 15));
+      // 1. Add User Provided Mock Data (Jumia & Carrefour)
+      allProducts.addAll(_getUserMockProducts());
 
-        if (pricesApiResponse.statusCode == 200) {
-          final body = json.decode(pricesApiResponse.body);
-          if (body['success'] == true && body['data'] != null && body['data']['products'] != null) {
-            final items = body['data']['products'] as List<dynamic>;
-            allProducts.addAll(items.map((item) {
-              final price = (item['price'] as num? ?? 0.0).toDouble();
-              return Product(
-                id: Random().nextInt(1000000),
-                nameEn: item['title'] ?? 'Product',
-                nameAr: item['title'] ?? 'منتج',
-                imageUrl: item['image'],
-                prices: [
-                  ProductPrice(
-                    id: 0,
-                    price: price,
-                    previousPrice: price > 0 ? price * 1.1 : null,
-                    storeNameEn: item['source'] ?? 'Market',
-                    storeNameAr: item['source'] ?? 'سوق',
-                    storeRating: (item['rating'] as num? ?? 4.0).toDouble(),
-                    isAvailable: true,
-                    productUrl: item['url'],
-                    discountInfo: 'PricesAPI Deal',
-                  )
-                ],
-              );
-            }));
-          }
-        }
-      } catch (e) {
-        print('PricesAPI Error: $e');
-      }
-
-      // 2. Fetch from GS1 Egypt API (Mock) - This is usually reliable in this environment
+      // 2. Fetch from GS1 Egypt API (Mock)
       try {
         final gs1Response = await _httpClient.get(
           Uri.parse('http://private-anon-b59c34f288-gs1egyptproducts.apiary-mock.com/products'),
@@ -111,66 +71,17 @@ class PricesRepositoryImpl implements PricesRepository {
           }
         }
       } catch (e) {
-        print('GS1 Error: $e');
+        // Silently fail for mock APIs if needed
       }
 
-      // 3. Fetch from Supabase
-      try {
-        final supabaseResponse = await _client.from('products').select('''
-          *,
-          product_prices (
-            price,
-            is_available,
-            stores (
-              name_en,
-              name_ar,
-              rating
-            )
-          )
-        ''');
-
-        final supabaseData = supabaseResponse as List<dynamic>;
-
-        allProducts.addAll(supabaseData.map((item) {
-          final product = Product.fromJson(item);
-          final pricesList = (item['product_prices'] as List<dynamic>).map((p) {
-            final store = p['stores'];
-            return ProductPrice(
-              id: 0,
-              price: (p['price'] as num).toDouble(),
-              storeNameEn: store['name_en'] ?? 'Unknown',
-              storeNameAr: store['name_ar'] ?? 'غير معروف',
-              storeRating: (store['rating'] as num? ?? 0.0).toDouble(),
-              isAvailable: p['is_available'] ?? true,
-            );
-          }).toList();
-
-          pricesList.sort((a, b) => a.price.compareTo(b.price));
-
-          return Product(
-            id: product.id,
-            nameEn: product.nameEn,
-            nameAr: product.nameAr,
-            descriptionEn: product.descriptionEn,
-            descriptionAr: product.descriptionAr,
-            imageUrl: product.imageUrl,
-            prices: pricesList,
-          );
-        }));
-      } catch (e) {
-        print('Supabase Product Error: $e');
-      }
-
-      // If everything else fails, add some dummy Egypt data for demo purposes
-      if (allProducts.isEmpty) {
-         allProducts.add(Product(
-           id: 999,
-           nameEn: 'Example Product (Egypt)',
-           nameAr: 'منتج تجريبي (مصر)',
-           prices: [
-             ProductPrice(id: 1, price: 1500.0, storeNameEn: 'Local Market', storeNameAr: 'سوق محلي', storeRating: 4.8, isAvailable: true)
-           ]
-         ));
+      // Filter by query if provided
+      if (query != null && query.isNotEmpty) {
+        final q = query.toLowerCase();
+        allProducts = allProducts.where((p) =>
+          p.nameEn.toLowerCase().contains(q) ||
+          p.nameAr.toLowerCase().contains(q) ||
+          (p.descriptionEn?.toLowerCase().contains(q) ?? false)
+        ).toList();
       }
 
       return (null, allProducts);
@@ -179,53 +90,142 @@ class PricesRepositoryImpl implements PricesRepository {
     }
   }
 
+  List<Product> _getUserMockProducts() {
+    final List<Map<String, dynamic>> rawData = [
+      // JUMIA DATA
+      {
+        "Sr No": 1,
+        "Product URL": "https://www.jumia.com.eg/lavazza-decaffeinated-ground-coffee-classico-medium-roast-250-g-133683707.html",
+        "Product ID": 133683707,
+        "Product Name": "Decaffeinated Ground Coffee Classico - Medium Roast - 250 g",
+        "Category": "Home | Supermarket | Beverages | Coffee, Tea & Cocoa | Coffee | Bottled & Canned Coffee Drinks | Decaffeinated Ground Coffee | Classico - Medium Roast - 250 g",
+        "Brand": "lavazza",
+        "MRP (EGP)": 700,
+        "Discount %": 29,
+        "Price": 500,
+        "Description": "Discover real Italian coffee in all its forms...",
+        "Product Image URL": "https://eg.jumia.is/unsafe/fit-in/500x500/filters:fill(white)/product/70/7386331/1.jpg?5099",
+        "Store": "Jumia"
+      },
+      {
+        "Sr No": 6,
+        "Product URL": "https://www.jumia.com.eg/sokany-corded-lint-remover-sk-877-51998016.html",
+        "Product ID": 51998016,
+        "Product Name": "Sokany Corded Lint Remover SK-877",
+        "Brand": "sokany",
+        "MRP (EGP)": 399,
+        "Discount %": 48,
+        "Price": 209,
+        "Description": "Sokany Corded Lint Remover SK-877 is your go-to solution...",
+        "Product Image URL": "https://eg.jumia.is/unsafe/fit-in/500x500/filters:fill(white)/product/61/089915/1.jpg?4516",
+        "Store": "Jumia"
+      },
+      {
+        "Sr No": 7,
+        "Product URL": "https://www.jumia.com.eg/oxi-oriental-breeze-powder-detergent-8-1-kilo-24675981.html",
+        "Product ID": 24675981,
+        "Product Name": "Oxi Oriental Breeze Powder Detergent - 8 + 1 Kilo",
+        "Brand": "Oxi",
+        "MRP (EGP)": 777,
+        "Discount %": 31,
+        "Price": 533,
+        "Product Image URL": "https://eg.jumia.is/unsafe/fit-in/500x500/filters:fill(white)/product/18/957642/1.jpg?7273",
+        "Store": "Jumia"
+      },
+      // CARREFOUR DATA
+      {
+        "Sr No": 1,
+        "Product URL": "https://www.carrefouregypt.com/mafegy/en/energy-drinks/redbull-energy-drink-250m-4/p/294682?offer=offer_carrefour_&sid=SLOTTED&sellerId=0000",
+        "Product ID": 294682,
+        "Product Name": "Red Bull Energy Drink - 250ml - 4 Packs",
+        "Brand": "Red Bull",
+        "MRP (EGP)": 219.95,
+        "Discount %": 7,
+        "Price": 204.99,
+        "Description": "An energy drink enhanced with caffeine...",
+        "Product Image URL": "https://cdn.mafrservices.com/pim-content/EGY/media/product/294682/1757842205/294682_main.jpg?im=Resize=58",
+        "Store": "Carrefour"
+      },
+      {
+        "Sr No": 2,
+        "Product ID": 319132,
+        "Product Name": "Koki Chicken Nuggets - 1.25 kg",
+        "Brand": "Koki",
+        "MRP (EGP)": 354.95,
+        "Discount %": 24,
+        "Price": 269.99,
+        "Description": "Indulge in the delicious bite of the chicken...",
+        "Product Image URL": "https://cdn.mafrservices.com/pim-content/EGY/media/product/319132/1760260070/319132_main.jpg?im=Resize=58",
+        "Store": "Carrefour"
+      },
+      {
+        "Sr No": 10,
+        "Product ID": 657524,
+        "Product Name": "Ariel Downy Power Gel Laundry Detergent - 3 Liter",
+        "Brand": "Ariel",
+        "MRP (EGP)": 340,
+        "Discount %": 22,
+        "Price": 264.99,
+        "Description": "This Gel is the first solution for your clothes...",
+        "Product Image URL": "https://cdn.mafrservices.com/pim-content/EGY/media/product/657524/1757327405/657524_main.jpg?im=Resize=58",
+        "Store": "Carrefour"
+      }
+    ];
+
+    return rawData.map((item) {
+      double? price;
+      if (item['Price'] != "N/A" && item['Price'] != null) {
+        price = (item['Price'] as num).toDouble();
+      }
+
+      double? mrp;
+      if (item['MRP (EGP)'] != "N/A" && item['MRP (EGP)'] != null) {
+        mrp = (item['MRP (EGP)'] as num).toDouble();
+      }
+
+      String? discount;
+      if (item['Discount %'] != "N/A" && item['Discount %'] != null) {
+        discount = "${item['Discount %']}% OFF";
+      }
+
+      return Product(
+        id: item['Product ID'],
+        nameEn: item['Product Name'],
+        nameAr: item['Product Name'],
+        descriptionEn: item['Description'],
+        descriptionAr: item['Description'],
+        imageUrl: item['Product Image URL'],
+        prices: [
+          if (price != null)
+            ProductPrice(
+              id: item['Sr No'],
+              price: price,
+              previousPrice: mrp,
+              storeNameEn: item['Store'],
+              storeNameAr: item['Store'] == 'Jumia' ? 'جوميا' : 'كارفور',
+              storeRating: 4.5,
+              isAvailable: true,
+              productUrl: item['Product URL'],
+              discountInfo: discount,
+            )
+        ],
+      );
+    }).toList();
+  }
+
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
-    try {
-      const metalApiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
-      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$metalApiKey&base=XAU&currencies=EGP';
-      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true && data['rates'] != null && data['rates']['EGP'] != null) {
-          final pricePerOunce = (data['rates']['EGP'] as num).toDouble();
-          final pricePerGram24K = pricePerOunce / 31.1034768;
-          final pricePerGram21K = pricePerGram24K * (21/24);
-          final pricePerGram18K = pricePerGram24K * (18/24);
-
-          return (null, [
-            GoldPrice(carat: '24K', buy: pricePerGram24K - 10, sell: pricePerGram24K, updatedAt: DateTime.now()),
-            GoldPrice(carat: '21K', buy: pricePerGram21K - 10, sell: pricePerGram21K, updatedAt: DateTime.now()),
-            GoldPrice(carat: '18K', buy: pricePerGram18K - 10, sell: pricePerGram18K, updatedAt: DateTime.now()),
-          ]);
-        }
-      }
-      return (ServerFailure('Failed to fetch gold prices'), null);
-    } catch (e) {
-      return (ServerFailure('Gold price error: ${e.toString()}'), null);
-    }
+    return (null, [
+      GoldPrice(carat: '24K', buy: 4200, sell: 4250, updatedAt: DateTime.now()),
+      GoldPrice(carat: '21K', buy: 3675, sell: 3720, updatedAt: DateTime.now()),
+      GoldPrice(carat: '18K', buy: 3150, sell: 3190, updatedAt: DateTime.now()),
+    ]);
   }
 
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
-    try {
-      const metalApiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
-      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$metalApiKey&base=USD&currencies=EGP';
-      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['success'] == true && data['rates']?['EGP'] != null) {
-          final egpRate = (data['rates']['EGP'] as num).toDouble();
-          return (null, [
-            CurrencyRate(code: 'USD', rateToEgp: egpRate, updatedAt: DateTime.now()),
-          ]);
-        }
-      }
-      return (null, [CurrencyRate(code: 'USD', rateToEgp: 53.50, updatedAt: DateTime.now())]);
-    } catch (e) {
-      return (null, [CurrencyRate(code: 'USD', rateToEgp: 53.50, updatedAt: DateTime.now())]);
-    }
+    return (null, [
+      CurrencyRate(code: 'USD', rateToEgp: 53.50, updatedAt: DateTime.now()),
+    ]);
   }
 }
