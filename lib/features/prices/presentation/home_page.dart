@@ -51,21 +51,28 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: TruceTheme.accentGreen,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
-        onTap: (index) => setState(() => _currentIndex = index),
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated || state is AuthGuest) {
+          context.read<PricesCubit>().loadDashboard();
+        }
+      },
+      child: Scaffold(
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          selectedItemColor: TruceTheme.accentGreen,
+          unselectedItemColor: Colors.grey,
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+            BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          ],
+          onTap: (index) => setState(() => _currentIndex = index),
+        ),
+        body: _pages[_currentIndex],
       ),
-      body: _pages[_currentIndex],
     );
   }
 }
@@ -83,7 +90,22 @@ class _HomeContent extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is PricesLoading) return const Center(child: CircularProgressIndicator());
-        if (state is PricesError) return Center(child: Text(state.message));
+        if (state is PricesError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(state.message),
+                ElevatedButton(
+                  onPressed: () => context.read<PricesCubit>().loadDashboard(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
         if (state is PricesLoaded) {
           return RefreshIndicator(
             onRefresh: () => context.read<PricesCubit>().loadDashboard(),
