@@ -29,7 +29,8 @@ class ProductDetailsPage extends StatelessWidget {
               width: double.infinity,
               color: Colors.white,
               child: product.imageUrl != null
-                  ? Image.network(product.imageUrl!, fit: BoxFit.contain)
+                  ? Image.network(product.imageUrl!, fit: BoxFit.contain,
+                      errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey))
                   : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
             ),
             Padding(
@@ -81,11 +82,22 @@ class ProductDetailsPage extends StatelessWidget {
               children: [
                 Text(
                   price.storeNameEn,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: TruceTheme.primary),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      price.storeRating.toString(),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                    ),
+                  ],
                 ),
                 if (price.discountInfo != null)
                   Container(
-                    margin: const EdgeInsets.only(top: 4),
+                    margin: const EdgeInsets.only(top: 6),
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(color: TruceTheme.accentGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
                     child: Text(price.discountInfo!, style: const TextStyle(color: TruceTheme.accentGreen, fontSize: 10, fontWeight: FontWeight.bold)),
@@ -117,6 +129,7 @@ class ProductDetailsPage extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               backgroundColor: TruceTheme.primary,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Visit'),
           ),

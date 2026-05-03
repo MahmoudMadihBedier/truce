@@ -51,11 +51,9 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     final (failure, _) = await _repository.signInAsGuest();
     if (failure != null) {
-      if (failure.message.contains('anonymous_provider_disabled')) {
-         emit(AuthGuest());
-      } else {
-         emit(AuthError(failure.message));
-      }
+      // Transition to Guest mode on ANY auth failure (network, provider disabled, etc.)
+      // This ensures the user is never blocked from browsing.
+      emit(AuthGuest());
     } else {
       emit(AuthAuthenticated());
     }
@@ -65,7 +63,9 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     final (failure, _) = await _repository.signInWithGoogle();
     if (failure != null) {
+      // In case of Google login error, we don't block the user, just inform them.
       emit(AuthError(failure.message));
+      // Optionally fallback to guest if needed, but here we just show error.
     }
   }
 
