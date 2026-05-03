@@ -159,13 +159,15 @@ class PricesRepositoryImpl implements PricesRepository {
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
     try {
       const metalApiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
+      // Fetch XAU/EGP (Gold price per ounce)
       const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$metalApiKey&base=XAU&currencies=EGP';
       final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['success'] == true) {
+        if (data['success'] == true && data['rates'] != null && data['rates']['EGP'] != null) {
           final pricePerOunce = (data['rates']['EGP'] as num).toDouble();
+          // Conversion: 1 troy ounce = 31.1034768 grams
           final pricePerGram24K = pricePerOunce / 31.1034768;
           final pricePerGram21K = pricePerGram24K * (21/24);
           final pricePerGram18K = pricePerGram24K * (18/24);
@@ -177,7 +179,7 @@ class PricesRepositoryImpl implements PricesRepository {
           ]);
         }
       }
-      return (ServerFailure('Failed to fetch gold prices from API'), null);
+      return (ServerFailure('Failed to fetch gold prices from API: ${response.statusCode}'), null);
     } catch (e) {
       return (ServerFailure('Gold price error: ${e.toString()}'), null);
     }

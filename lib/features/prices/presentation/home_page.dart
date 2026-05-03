@@ -11,6 +11,7 @@ import 'package:truce/features/prices/presentation/prices_cubit.dart';
 import 'package:truce/features/prices/presentation/product_details_page.dart';
 import 'package:truce/features/settings/presentation/settings_cubit.dart';
 import 'package:truce/features/settings/presentation/settings_page.dart';
+import 'package:truce/features/coupons/presentation/coupons_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,8 +25,8 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     const _HomeContent(),
-    const Center(child: Text('Search - Coming Soon')),
-    const Center(child: Text('Coupons - Coming Soon')),
+    const Center(child: Text('Search - Use the Search Bar in Home')),
+    const CouponsPage(),
     const SettingsPage(),
   ];
 
