@@ -42,7 +42,7 @@ class PricesRepositoryImpl implements PricesRepository {
               final basePrice = 20.0 + random.nextInt(100);
 
               return Product(
-                id: random.nextInt(10000),
+                id: random.nextInt(100000),
                 nameEn: productName,
                 nameAr: productName,
                 descriptionEn: description,
@@ -71,7 +71,54 @@ class PricesRepositoryImpl implements PricesRepository {
           }
         }
       } catch (e) {
-        // Silently fail for mock APIs if needed
+        // Silently fail for mock APIs
+      }
+
+      // 3. Fetch from Supabase (Live Dashboard Data)
+      try {
+        final supabaseResponse = await _client.from('products').select('''
+          *,
+          product_prices (
+            price,
+            is_available,
+            stores (
+              name_en,
+              name_ar,
+              rating
+            )
+          )
+        ''');
+
+        final supabaseData = supabaseResponse as List<dynamic>;
+
+        allProducts.addAll(supabaseData.map((item) {
+          final product = Product.fromJson(item);
+          final pricesList = (item['product_prices'] as List<dynamic>).map((p) {
+            final store = p['stores'];
+            return ProductPrice(
+              id: 0,
+              price: (p['price'] as num).toDouble(),
+              storeNameEn: store['name_en'] ?? 'Unknown',
+              storeNameAr: store['name_ar'] ?? 'غير معروف',
+              storeRating: (store['rating'] as num? ?? 0.0).toDouble(),
+              isAvailable: p['is_available'] ?? true,
+            );
+          }).toList();
+
+          pricesList.sort((a, b) => a.price.compareTo(b.price));
+
+          return Product(
+            id: product.id,
+            nameEn: product.nameEn,
+            nameAr: product.nameAr,
+            descriptionEn: product.descriptionEn,
+            descriptionAr: product.descriptionAr,
+            imageUrl: product.imageUrl,
+            prices: pricesList,
+          );
+        }));
+      } catch (e) {
+        // Supabase error handling
       }
 
       // Filter by query if provided
@@ -92,7 +139,6 @@ class PricesRepositoryImpl implements PricesRepository {
 
   List<Product> _getUserMockProducts() {
     final List<Map<String, dynamic>> rawData = [
-      // JUMIA DATA
       {
         "Sr No": 1,
         "Product URL": "https://www.jumia.com.eg/lavazza-decaffeinated-ground-coffee-classico-medium-roast-250-g-133683707.html",
@@ -103,7 +149,7 @@ class PricesRepositoryImpl implements PricesRepository {
         "MRP (EGP)": 700,
         "Discount %": 29,
         "Price": 500,
-        "Description": "Discover real Italian coffee in all its forms...",
+        "Description": "Discover real Italian coffee in all its forms. Dek Classico, the ideal coffee blend for when you want to enjoy some authentic Italian coffee, without all the caffeine.",
         "Product Image URL": "https://eg.jumia.is/unsafe/fit-in/500x500/filters:fill(white)/product/70/7386331/1.jpg?5099",
         "Store": "Jumia"
       },
@@ -116,23 +162,10 @@ class PricesRepositoryImpl implements PricesRepository {
         "MRP (EGP)": 399,
         "Discount %": 48,
         "Price": 209,
-        "Description": "Sokany Corded Lint Remover SK-877 is your go-to solution...",
+        "Description": "Sokany Corded Lint Remover SK-877 is your go-to solution for restoring the elegant look of your garments.",
         "Product Image URL": "https://eg.jumia.is/unsafe/fit-in/500x500/filters:fill(white)/product/61/089915/1.jpg?4516",
         "Store": "Jumia"
       },
-      {
-        "Sr No": 7,
-        "Product URL": "https://www.jumia.com.eg/oxi-oriental-breeze-powder-detergent-8-1-kilo-24675981.html",
-        "Product ID": 24675981,
-        "Product Name": "Oxi Oriental Breeze Powder Detergent - 8 + 1 Kilo",
-        "Brand": "Oxi",
-        "MRP (EGP)": 777,
-        "Discount %": 31,
-        "Price": 533,
-        "Product Image URL": "https://eg.jumia.is/unsafe/fit-in/500x500/filters:fill(white)/product/18/957642/1.jpg?7273",
-        "Store": "Jumia"
-      },
-      // CARREFOUR DATA
       {
         "Sr No": 1,
         "Product URL": "https://www.carrefouregypt.com/mafegy/en/energy-drinks/redbull-energy-drink-250m-4/p/294682?offer=offer_carrefour_&sid=SLOTTED&sellerId=0000",
@@ -142,20 +175,8 @@ class PricesRepositoryImpl implements PricesRepository {
         "MRP (EGP)": 219.95,
         "Discount %": 7,
         "Price": 204.99,
-        "Description": "An energy drink enhanced with caffeine...",
+        "Description": "An energy drink enhanced with caffeine and vitamins, perfect for maintaining alertness and energy.",
         "Product Image URL": "https://cdn.mafrservices.com/pim-content/EGY/media/product/294682/1757842205/294682_main.jpg?im=Resize=58",
-        "Store": "Carrefour"
-      },
-      {
-        "Sr No": 2,
-        "Product ID": 319132,
-        "Product Name": "Koki Chicken Nuggets - 1.25 kg",
-        "Brand": "Koki",
-        "MRP (EGP)": 354.95,
-        "Discount %": 24,
-        "Price": 269.99,
-        "Description": "Indulge in the delicious bite of the chicken...",
-        "Product Image URL": "https://cdn.mafrservices.com/pim-content/EGY/media/product/319132/1760260070/319132_main.jpg?im=Resize=58",
         "Store": "Carrefour"
       },
       {
@@ -166,7 +187,7 @@ class PricesRepositoryImpl implements PricesRepository {
         "MRP (EGP)": 340,
         "Discount %": 22,
         "Price": 264.99,
-        "Description": "This Gel is the first solution for your clothes...",
+        "Description": "This Gel is the first solution for your clothes. Gentle on fabrics, it offers strong stain removal.",
         "Product Image URL": "https://cdn.mafrservices.com/pim-content/EGY/media/product/657524/1757327405/657524_main.jpg?im=Resize=58",
         "Store": "Carrefour"
       }
@@ -215,6 +236,19 @@ class PricesRepositoryImpl implements PricesRepository {
 
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
+    try {
+      final response = await _client.from('gold_prices').select();
+      final data = response as List<dynamic>;
+      if (data.isNotEmpty) {
+        return (null, data.map((g) => GoldPrice(
+          carat: g['carat'],
+          buy: (g['price_buy'] as num).toDouble(),
+          sell: (g['price_sell'] as num).toDouble(),
+          updatedAt: DateTime.parse(g['updated_at']),
+        )).toList());
+      }
+    } catch (e) { }
+
     return (null, [
       GoldPrice(carat: '24K', buy: 4200, sell: 4250, updatedAt: DateTime.now()),
       GoldPrice(carat: '21K', buy: 3675, sell: 3720, updatedAt: DateTime.now()),
@@ -224,6 +258,18 @@ class PricesRepositoryImpl implements PricesRepository {
 
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
+    try {
+      final response = await _client.from('currency_rates').select();
+      final data = response as List<dynamic>;
+      if (data.isNotEmpty) {
+        return (null, data.map((c) => CurrencyRate(
+          code: c['currency_code'],
+          rateToEgp: (c['rate_to_egp'] as num).toDouble(),
+          updatedAt: DateTime.parse(c['updated_at']),
+        )).toList());
+      }
+    } catch (e) { }
+
     return (null, [
       CurrencyRate(code: 'USD', rateToEgp: 53.50, updatedAt: DateTime.now()),
     ]);
