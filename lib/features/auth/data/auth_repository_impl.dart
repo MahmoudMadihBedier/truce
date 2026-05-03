@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:truce/core/error/failures.dart';
 import 'package:truce/core/utils/typedefs.dart';
@@ -11,23 +12,17 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signInWithEmail(String email, String password) async {
     try {
-      await _client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+      await _client.auth.signInWithPassword(email: email, password: password);
       return (null, null);
-    } catch (_) {
-      return (AuthFailure('Invalid credentials or network error'), null);
+    } catch (e) {
+      return (AuthFailure(e.toString()), null);
     }
   }
 
   @override
   Future<ApiResult<void>> signUpWithEmail(String email, String password) async {
     try {
-      await _client.auth.signUp(
-        email: email,
-        password: password,
-      );
+      await _client.auth.signUp(email: email, password: password);
       return (null, null);
     } catch (e) {
       return (AuthFailure(e.toString()), null);
@@ -47,6 +42,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signInAsGuest() async {
     try {
+      // Note: This requires 'Allow Anonymous Sign-ins' to be enabled in Supabase Dashboard
       await _client.auth.signInAnonymously();
       return (null, null);
     } catch (e) {
@@ -57,7 +53,10 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signInWithGoogle() async {
     try {
-      await _client.auth.signInWithOAuth(OAuthProvider.google);
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.truce://login-callback/',
+      );
       return (null, null);
     } catch (e) {
       return (AuthFailure(e.toString()), null);

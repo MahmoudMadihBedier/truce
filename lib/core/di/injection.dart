@@ -33,7 +33,7 @@ Future<void> init() async {
 
 void _initAuth() {
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(sl()));
-  sl.registerFactory(() => AuthCubit(sl()));
+  sl.registerFactory(() => AuthCubit(sl(), sl()));
 }
 
 void _initPrices() {
