@@ -4,9 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:truce/core/di/injection.dart' as di;
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
-import 'package:truce/features/prices/presentation/home_page.dart';
 import 'package:truce/features/prices/presentation/prices_cubit.dart';
 import 'package:truce/features/settings/presentation/settings_cubit.dart';
+import 'package:truce/features/prices/presentation/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
             themeMode: settings.themeMode,
             locale: settings.locale,
             debugShowCheckedModeBanner: false,
-            home: const HomePage(),
+            home: const SplashScreen(),
           );
         },
       ),

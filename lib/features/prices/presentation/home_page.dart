@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/marquee_ticker.dart';
+import 'package:truce/core/utils/shimmer_loader.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/auth/presentation/auth_dialog.dart';
@@ -87,41 +88,26 @@ class _HomeContent extends StatelessWidget {
       builder: (context, state) {
         if (state is PricesInitial) {
           context.read<PricesCubit>().loadDashboard();
-          return const Center(child: CircularProgressIndicator());
         }
-        if (state is PricesLoading) return const Center(child: CircularProgressIndicator());
-        if (state is PricesError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(state.message),
-                ElevatedButton(
-                  onPressed: () => context.read<PricesCubit>().loadDashboard(),
-                  child: const Text('Retry'),
+
+        return RefreshIndicator(
+          onRefresh: () => context.read<PricesCubit>().loadDashboard(
+            categoryId: state is PricesLoaded ? state.selectedCategoryId : null
+          ),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                pinned: true,
+                floating: true,
+                title: Row(
+                  children: [
+                    Image.asset('assets/images/logo.png', height: 32),
+                    const SizedBox(width: 8),
+                    Text(LocalStrings.get('app_title', locale), style: const TextStyle(fontSize: 20)),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }
-        if (state is PricesLoaded) {
-          return RefreshIndicator(
-            onRefresh: () => context.read<PricesCubit>().loadDashboard(categoryId: state.selectedCategoryId),
-            child: CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  pinned: true,
-                  floating: true,
-                  title: Row(
-                    children: [
-                      Image.asset('assets/images/logo.png', height: 32),
-                      const SizedBox(width: 8),
-                      Text(LocalStrings.get('app_title', locale), style: const TextStyle(fontSize: 20)),
-                    ],
-                  ),
-                ),
+              ),
+              if (state is PricesLoaded)
                 SliverToBoxAdapter(
                   child: MarqueeTicker(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MarketRatesPage())),
@@ -139,20 +125,21 @@ class _HomeContent extends StatelessWidget {
                     ],
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: SearchBar(
-                      hintText: LocalStrings.get('search_hint', locale),
-                      leading: const Icon(Icons.search),
-                      onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
-                      elevation: WidgetStateProperty.all(0),
-                      backgroundColor: WidgetStateProperty.all(Colors.grey[200]),
-                      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: SearchBar(
+                    hintText: LocalStrings.get('search_hint', locale),
+                    leading: const Icon(Icons.search),
+                    onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
+                    elevation: WidgetStateProperty.all(0),
+                    backgroundColor: WidgetStateProperty.all(Colors.grey[200]),
+                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   ),
                 ),
-                // Categories Selector
+              ),
+              // Categories Selector
+              if (state is PricesLoaded)
                 SliverToBoxAdapter(
                   child: Container(
                     height: 50,
@@ -181,16 +168,66 @@ class _HomeContent extends StatelessWidget {
                       },
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverToBoxAdapter(
-                    child: Text(
-                      LocalStrings.get('market_products', locale),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
+                )
+              else
+                 SliverToBoxAdapter(
+                   child: Container(
+                     height: 50,
+                     margin: const EdgeInsets.symmetric(vertical: 8),
+                     child: ListView.builder(
+                       scrollDirection: Axis.horizontal,
+                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                       itemCount: 5,
+                       itemBuilder: (context, index) => const Padding(
+                         padding: EdgeInsets.only(right: 8.0),
+                         child: ShimmerLoader(width: 80, height: 40, borderRadius: 20),
+                       ),
+                     ),
+                   ),
+                 ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    LocalStrings.get('market_products', locale),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ),
+              ),
+              if (state is PricesLoading)
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => const ShimmerLoader(width: 200, height: 250, borderRadius: 16),
+                      childCount: 6,
+                    ),
+                  ),
+                )
+              else if (state is PricesError)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(state.message),
+                        ElevatedButton(
+                          onPressed: () => context.read<PricesCubit>().loadDashboard(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (state is PricesLoaded)
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
@@ -209,11 +246,9 @@ class _HomeContent extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
-          );
-        }
-        return const SizedBox();
+            ],
+          ),
+        );
       },
     );
   }
