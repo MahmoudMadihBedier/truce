@@ -8,9 +8,15 @@ class ProductDetailsPage extends StatelessWidget {
   const ProductDetailsPage({super.key, required this.product});
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
+    final Uri uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        debugPrint('Could not launch $url');
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
     }
   }
 
@@ -32,7 +38,7 @@ class ProductDetailsPage extends StatelessWidget {
               child: Stack(
                 children: [
                    Center(
-                     child: product.imageUrl != null
+                     child: product.imageUrl != null && product.imageUrl!.isNotEmpty
                         ? Image.network(product.imageUrl!, fit: BoxFit.contain,
                             errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey))
                         : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
@@ -159,7 +165,9 @@ class ProductDetailsPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               ElevatedButton(
-                onPressed: price.productUrl != null ? () => _launchUrl(price.productUrl!) : null,
+                onPressed: (price.productUrl != null && price.productUrl!.isNotEmpty)
+                  ? () => _launchUrl(price.productUrl!)
+                  : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: TruceTheme.primary,
                   foregroundColor: Colors.white,
