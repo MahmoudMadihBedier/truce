@@ -88,7 +88,6 @@ class _HomeContent extends StatelessWidget {
       builder: (context, state) {
         if (state is PricesInitial) {
           context.read<PricesCubit>().loadDashboard();
-          return const Center(child: CircularProgressIndicator());
         }
 
         return RefreshIndicator(
@@ -201,12 +200,12 @@ class _HomeContent extends StatelessWidget {
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.7,
+                      childAspectRatio: 0.64,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
                     ),
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => const ShimmerLoader(width: 200, height: 250, borderRadius: 16),
+                      (context, index) => const ShimmerLoader(width: 200, height: 260, borderRadius: 16),
                       childCount: 6,
                     ),
                   ),
@@ -234,7 +233,7 @@ class _HomeContent extends StatelessWidget {
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.7,
+                      childAspectRatio: 0.64,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
                     ),
@@ -285,7 +284,7 @@ class _HomeContent extends StatelessWidget {
                         fit: BoxFit.contain,
                         loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
-                          return const Center(child: ShimmerLoader(width: 100, height: 100));
+                          return const Center(child: ShimmerLoader(width: 60, height: 60));
                         },
                         errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey),
                       )
@@ -295,25 +294,28 @@ class _HomeContent extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(10.0),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       locale == 'ar' ? product.nameAr : product.nameEn,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 4),
                     if (lowestPrice != null) ...[
                       Text(
                         'EGP ${lowestPrice.price.toStringAsFixed(2)}',
-                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       Text(
                         locale == 'ar' ? lowestPrice.storeNameAr : lowestPrice.storeNameEn,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 10),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],
