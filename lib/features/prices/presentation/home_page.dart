@@ -11,6 +11,7 @@ import 'package:truce/features/prices/presentation/prices_cubit.dart';
 import 'package:truce/features/prices/presentation/product_details_page.dart';
 import 'package:truce/features/settings/presentation/settings_cubit.dart';
 import 'package:truce/features/settings/presentation/settings_page.dart';
+import 'package:truce/features/coupons/presentation/coupons_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,8 +25,8 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     const _HomeContent(),
-    const Center(child: Text('Search - Coming Soon')),
-    const Center(child: Text('Coupons - Coming Soon')),
+    const Center(child: Text('Search - Use the Search Bar in Home')),
+    const CouponsPage(),
     const SettingsPage(),
   ];
 
@@ -50,21 +51,28 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: TruceTheme.accentGreen,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
-        onTap: (index) => setState(() => _currentIndex = index),
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated || state is AuthGuest) {
+          context.read<PricesCubit>().loadDashboard();
+        }
+      },
+      child: Scaffold(
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          selectedItemColor: TruceTheme.accentGreen,
+          unselectedItemColor: Colors.grey,
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+            BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          ],
+          onTap: (index) => setState(() => _currentIndex = index),
+        ),
+        body: _pages[_currentIndex],
       ),
-      body: _pages[_currentIndex],
     );
   }
 }
@@ -82,7 +90,22 @@ class _HomeContent extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is PricesLoading) return const Center(child: CircularProgressIndicator());
-        if (state is PricesError) return Center(child: Text(state.message));
+        if (state is PricesError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(state.message),
+                ElevatedButton(
+                  onPressed: () => context.read<PricesCubit>().loadDashboard(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
         if (state is PricesLoaded) {
           return RefreshIndicator(
             onRefresh: () => context.read<PricesCubit>().loadDashboard(),
@@ -173,8 +196,9 @@ class _HomeContent extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: product.imageUrl != null
-                    ? Image.network(product.imageUrl!, fit: BoxFit.contain)
+                child: (product.imageUrl != null && product.imageUrl!.startsWith('http'))
+                    ? Image.network(product.imageUrl!, fit: BoxFit.contain,
+                        errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey))
                     : const Icon(Icons.image_outlined, color: Colors.grey),
               ),
               const SizedBox(width: 16),
@@ -185,14 +209,26 @@ class _HomeContent extends StatelessWidget {
                     Text(
                       locale == 'ar' ? product.nameAr : product.nameEn,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (lowestPrice != null) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        '${LocalStrings.get('lowest', locale)}: EGP ${lowestPrice.price}',
-                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          if (lowestPrice.previousPrice != null)
+                             Padding(
+                               padding: const EdgeInsets.only(right: 8.0),
+                               child: Text(
+                                 'EGP ${lowestPrice.previousPrice!.toStringAsFixed(2)}',
+                                 style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 10),
+                               ),
+                             ),
+                          Text(
+                            '${LocalStrings.get('lowest', locale)}: EGP ${lowestPrice.price.toStringAsFixed(2)}',
+                            style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                       Text(
                         '${LocalStrings.get('at', locale)} ${locale == 'ar' ? lowestPrice.storeNameAr : lowestPrice.storeNameEn}',

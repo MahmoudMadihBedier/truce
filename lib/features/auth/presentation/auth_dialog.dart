@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
+import 'package:truce/features/settings/presentation/settings_cubit.dart';
 
 class AuthDialog extends StatefulWidget {
   const AuthDialog({super.key});
@@ -11,85 +13,109 @@ class AuthDialog extends StatefulWidget {
 }
 
 class _AuthDialogState extends State<AuthDialog> {
-  bool isLogin = true;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLogin = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: BlocConsumer<AuthCubit, AuthState>(
-          listener: (context, state) {
-            if (state is AuthAuthenticated || state is AuthGuest) {
-              Navigator.pop(context);
-            }
-            if (state is AuthError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-              );
-            }
-          },
-          builder: (context, state) {
-            if (state is AuthLoading) {
-              return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()));
-            }
+    final locale = context.watch<SettingsCubit>().state.locale.languageCode;
 
-            return Column(
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated || state is AuthGuest) {
+          if (Navigator.canPop(context)) {
+            Navigator.of(context).pop();
+          }
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: SingleChildScrollView(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(child: Image.asset('assets/images/logo.png', height: 60)),
+                Image.asset('assets/images/logo.png', height: 60),
                 const SizedBox(height: 16),
                 Text(
-                  isLogin ? 'Login | تسجيل الدخول' : 'Sign Up | إنشاء حساب',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TruceTheme.primary),
-                  textAlign: TextAlign.center,
+                  _isLogin ? LocalStrings.get('login', locale) : LocalStrings.get('signup', locale),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: TruceTheme.primary),
                 ),
                 const SizedBox(height: 24),
-                TextFormField(
+                TextField(
                   controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email | البريد الإلكتروني'),
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password | كلمة المرور'),
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    if (isLogin) {
-                      context.read<AuthCubit>().signIn(_emailController.text, _passwordController.text);
-                    } else {
-                      context.read<AuthCubit>().signUp(_emailController.text, _passwordController.text);
-                    }
-                  },
-                  child: Text(isLogin ? 'Login' : 'Sign Up'),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_isLogin) {
+                        context.read<AuthCubit>().signIn(_emailController.text, _passwordController.text);
+                      } else {
+                        context.read<AuthCubit>().signUp(_emailController.text, _passwordController.text);
+                      }
+                    },
+                    child: BlocBuilder<AuthCubit, AuthState>(
+                      builder: (context, state) {
+                        if (state is AuthLoading) return const CircularProgressIndicator(color: Colors.white);
+                        return Text(_isLogin ? LocalStrings.get('login', locale) : LocalStrings.get('signup', locale));
+                      },
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 12),
                 TextButton(
-                  onPressed: () => setState(() => isLogin = !isLogin),
-                  child: Text(isLogin ? 'New user? Sign Up' : 'Already have an account? Login'),
+                  onPressed: () => setState(() => _isLogin = !_isLogin),
+                  child: Text(_isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"),
                 ),
-                const Divider(),
+                const Divider(height: 32),
                 OutlinedButton.icon(
                   onPressed: () => context.read<AuthCubit>().signInWithGoogle(),
-                  icon: const Icon(Icons.g_mobiledata),
+                  icon: const Icon(Icons.g_mobiledata, size: 30),
                   label: const Text('Continue with Google'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 TextButton(
-                  onPressed: () {
-                    context.read<AuthCubit>().continueAsGuest();
-                  },
-                  child: const Text('Cancel / Continue as Guest', style: TextStyle(color: Colors.grey)),
+                  onPressed: () => context.read<AuthCubit>().continueAsGuest(),
+                  child: Text(LocalStrings.get('guest', locale), style: const TextStyle(color: Colors.grey)),
                 ),
               ],
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

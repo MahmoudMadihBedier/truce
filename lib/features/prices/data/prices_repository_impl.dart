@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:truce/core/error/failures.dart';
@@ -16,151 +15,90 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
-      final gs1Response = await _httpClient.get(
-        Uri.parse('http://private-anon-b59c34f288-gs1egyptproducts.apiary-mock.com/products'),
-      ).timeout(const Duration(seconds: 10));
+      final searchTerm = query ?? 'phone';
 
-      List<Product> products = [];
+      final response = await _httpClient.get(
+        Uri.parse('https://mgqcolwglaavwazjwjir.supabase.co/functions/v1/product-aggregator?q=$searchTerm'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
 
-      if (gs1Response.statusCode == 200) {
-        final gs1Data = json.decode(gs1Response.body);
-        if (gs1Data is Map && gs1Data.containsKey('products')) {
-          final gs1Products = gs1Data['products'] as List<dynamic>;
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
 
-          products = gs1Products.map((item) {
-            final productName = item['productName']?['value'] ?? 'Unknown Product';
-            final description = item['consumerMarketingDescription']?['value'];
-            final photos = item['photos']?['value'];
-            final imageUrl = (photos is List && photos.isNotEmpty) ? photos[0] : null;
-
-            final random = Random();
-            final basePrice = 20.0 + random.nextInt(100);
-
-            return Product(
-              id: random.nextInt(10000),
-              nameEn: productName,
-              nameAr: productName,
-              descriptionEn: description,
-              descriptionAr: description,
-              imageUrl: imageUrl,
-              prices: [
-                ProductPrice(
-                  id: 1,
-                  price: basePrice,
-                  storeNameEn: 'Amazon Egypt',
-                  storeNameAr: 'أمازون مصر',
-                  storeRating: 4.5,
-                  isAvailable: true,
-                ),
-                ProductPrice(
-                  id: 2,
-                  price: max(5.0, basePrice - 2.5),
-                  storeNameEn: 'Noon',
-                  storeNameAr: 'نون',
-                  storeRating: 4.2,
-                  isAvailable: true,
-                ),
-              ]..sort((a, b) => a.price.compareTo(b.price)),
-            );
-          }).toList();
-        }
-      }
-
-      final supabaseResponse = await _client.from('products').select('''
-        *,
-        product_prices (
-          price,
-          is_available,
-          stores (
-            name_en,
-            name_ar,
-            rating
-          )
-        )
-      ''');
-
-      final supabaseData = supabaseResponse as List<dynamic>;
-
-      final supabaseProducts = supabaseData.map((item) {
-        final product = Product.fromJson(item);
-        final prices = (item['product_prices'] as List<dynamic>).map((p) {
-          final store = p['stores'];
-          return ProductPrice(
-            id: 0,
-            price: (p['price'] as num).toDouble(),
-            storeNameEn: store['name_en'] ?? 'Unknown',
-            storeNameAr: store['name_ar'] ?? 'غير معروف',
-            storeRating: (store['rating'] as num? ?? 0.0).toDouble(),
-            isAvailable: p['is_available'] ?? true,
+        final List<Product> products = data.map((item) {
+          return Product(
+            id: DateTime.now().millisecondsSinceEpoch + item.hashCode,
+            nameEn: item['name'],
+            nameAr: item['name'],
+            imageUrl: item['image'],
+            descriptionEn: item['description'],
+            descriptionAr: item['description'],
+            prices: [
+              ProductPrice(
+                id: 0,
+                price: (item['price'] as num).toDouble(),
+                storeNameEn: item['store'],
+                storeNameAr: _getStoreNameAr(item['store']),
+                storeRating: (item['rating'] as num).toDouble(),
+                isAvailable: true,
+                productUrl: item['url'],
+              )
+            ],
           );
         }).toList();
 
-        prices.sort((a, b) => a.price.compareTo(b.price));
-
-        return Product(
-          id: product.id,
-          nameEn: product.nameEn,
-          nameAr: product.nameAr,
-          descriptionEn: product.descriptionEn,
-          descriptionAr: product.descriptionAr,
-          imageUrl: product.imageUrl,
-          prices: prices,
-        );
-      }).toList();
-
-      return (null, [...products, ...supabaseProducts]);
+        return (null, products);
+      } else {
+        return (ServerFailure('API Error: ${response.statusCode}'), null);
+      }
     } catch (e) {
-      return (ServerFailure('Failed to fetch products: ${e.toString()}'), null);
+      return (ServerFailure('Network error: ${e.toString()}'), null);
     }
+  }
+
+  String _getStoreNameAr(String en) {
+    if (en.contains('Amazon')) return 'أمازون مصر';
+    if (en.contains('Jumia')) return 'جوميا';
+    if (en.contains('Carrefour')) return 'كارفور مصر';
+    return en;
   }
 
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
     try {
-      const apiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
-      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$apiKey&base=XAU&currencies=EGP';
-      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          final pricePerOunce = (data['rates']['EGP'] as num).toDouble();
-          final pricePerGram24K = pricePerOunce / 31.1034768;
-          final pricePerGram21K = pricePerGram24K * (21/24);
-          final pricePerGram18K = pricePerGram24K * (18/24);
-
-          return (null, [
-            GoldPrice(carat: '24K', buy: pricePerGram24K - 10, sell: pricePerGram24K, updatedAt: DateTime.now()),
-            GoldPrice(carat: '21K', buy: pricePerGram21K - 10, sell: pricePerGram21K, updatedAt: DateTime.now()),
-            GoldPrice(carat: '18K', buy: pricePerGram18K - 10, sell: pricePerGram18K, updatedAt: DateTime.now()),
-          ]);
-        }
-      }
-      return (ServerFailure('Failed to fetch gold prices from API'), null);
+      final response = await _client.from('gold_prices').select();
+      final data = response as List<dynamic>;
+      final List<GoldPrice> list = data.map((g) => GoldPrice(
+        carat: g['carat'],
+        buy: (g['price_buy'] as num).toDouble(),
+        sell: (g['price_sell'] as num).toDouble(),
+        updatedAt: DateTime.parse(g['updated_at']),
+      )).toList();
+      return (null, list);
     } catch (e) {
-      return (ServerFailure('Gold price error: ${e.toString()}'), null);
+      return (null, [
+        GoldPrice(carat: '24K', buy: 4200, sell: 4250, updatedAt: DateTime.now()),
+      ]);
     }
   }
 
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
     try {
-      const apiKey = 'b819b9d518eef61ac6a58d3ac63ae402';
-      const url = 'https://api.metalpriceapi.com/v1/latest?api_key=$apiKey&base=USD&currencies=EGP';
-      final response = await _httpClient.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data is Map && data['success'] == true && data['rates']?['EGP'] != null) {
-          final egpRate = (data['rates']['EGP'] as num).toDouble();
-          return (null, [
-            CurrencyRate(code: 'USD', rateToEgp: egpRate, updatedAt: DateTime.now()),
-          ]);
-        }
-      }
-      return (null, [CurrencyRate(code: 'USD', rateToEgp: 48.50, updatedAt: DateTime.now())]);
+      final response = await _client.from('currency_rates').select();
+      final data = response as List<dynamic>;
+      final List<CurrencyRate> list = data.map((c) => CurrencyRate(
+        code: c['currency_code'],
+        rateToEgp: (c['rate_to_egp'] as num).toDouble(),
+        updatedAt: DateTime.parse(c['updated_at']),
+      )).toList();
+      return (null, list);
     } catch (e) {
-      return (null, [CurrencyRate(code: 'USD', rateToEgp: 48.50, updatedAt: DateTime.now())]);
+      return (null, [
+        CurrencyRate(code: 'USD', rateToEgp: 53.50, updatedAt: DateTime.now()),
+      ]);
     }
   }
 }
