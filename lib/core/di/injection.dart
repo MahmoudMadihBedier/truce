@@ -6,8 +6,6 @@ import 'package:truce/features/auth/domain/auth_repository.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/prices/data/prices_repository_impl.dart';
 import 'package:truce/features/prices/domain/prices_repository.dart';
-import 'package:truce/features/prices/domain/usecases/get_dashboard_data.dart';
-import 'package:truce/features/prices/domain/usecases/search_products.dart';
 import 'package:truce/features/prices/presentation/prices_cubit.dart';
 import 'package:truce/features/coupons/data/coupons_repository_impl.dart';
 import 'package:truce/features/coupons/domain/coupons_repository.dart';
@@ -38,12 +36,7 @@ void _initAuth() {
 
 void _initPrices() {
   sl.registerLazySingleton<PricesRepository>(() => PricesRepositoryImpl(sl()));
-
-  // Use cases
-  sl.registerLazySingleton(() => GetDashboardData(sl()));
-  sl.registerLazySingleton(() => SearchProducts(sl()));
-
-  sl.registerFactory(() => PricesCubit(sl(), sl()));
+  sl.registerFactory(() => PricesCubit(sl()));
 }
 
 void _initCoupons() {

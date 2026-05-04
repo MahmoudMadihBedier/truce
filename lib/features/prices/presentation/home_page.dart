@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/marquee_ticker.dart';
+import 'package:truce/core/utils/shimmer_loader.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/auth/presentation/auth_dialog.dart';
@@ -89,38 +90,25 @@ class _HomeContent extends StatelessWidget {
           context.read<PricesCubit>().loadDashboard();
           return const Center(child: CircularProgressIndicator());
         }
-        if (state is PricesLoading) return const Center(child: CircularProgressIndicator());
-        if (state is PricesError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(state.message),
-                ElevatedButton(
-                  onPressed: () => context.read<PricesCubit>().loadDashboard(),
-                  child: const Text('Retry'),
+
+        return RefreshIndicator(
+          onRefresh: () => context.read<PricesCubit>().loadDashboard(
+            categoryId: state is PricesLoaded ? state.selectedCategoryId : null
+          ),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                pinned: true,
+                floating: true,
+                title: Row(
+                  children: [
+                    Image.asset('assets/images/logo.png', height: 32),
+                    const SizedBox(width: 8),
+                    Text(LocalStrings.get('app_title', locale), style: const TextStyle(fontSize: 20)),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }
-        if (state is PricesLoaded) {
-          return RefreshIndicator(
-            onRefresh: () => context.read<PricesCubit>().loadDashboard(),
-            child: CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  pinned: true,
-                  title: Row(
-                    children: [
-                      Image.asset('assets/images/logo.png', height: 32),
-                      const SizedBox(width: 8),
-                      Text(LocalStrings.get('app_title', locale)),
-                    ],
-                  ),
-                ),
+              ),
+              if (state is PricesLoaded)
                 SliverToBoxAdapter(
                   child: MarqueeTicker(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MarketRatesPage())),
@@ -138,40 +126,130 @@ class _HomeContent extends StatelessWidget {
                     ],
                   ),
                 ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: SearchBar(
+                    hintText: LocalStrings.get('search_hint', locale),
+                    leading: const Icon(Icons.search),
+                    onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
+                    elevation: WidgetStateProperty.all(0),
+                    backgroundColor: WidgetStateProperty.all(Colors.grey[200]),
+                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  ),
+                ),
+              ),
+              // Categories Selector
+              if (state is PricesLoaded)
                 SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: SearchBar(
-                      hintText: LocalStrings.get('search_hint', locale),
-                      leading: const Icon(Icons.search),
-                      onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
-                      elevation: WidgetStateProperty.all(0),
+                  child: Container(
+                    height: 50,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: state.categories.length + 1,
+                      itemBuilder: (context, index) {
+                        final isAll = index == 0;
+                        final isSelected = isAll ? state.selectedCategoryId == null : state.selectedCategoryId == state.categories[index - 1].id;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ChoiceChip(
+                            label: Text(isAll ? 'All' : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
+                            selected: isSelected,
+                            onSelected: (_) => context.read<PricesCubit>().selectCategory(isAll ? null : state.categories[index - 1].id),
+                            selectedColor: TruceTheme.accentGreen.withOpacity(0.2),
+                            labelStyle: TextStyle(
+                              color: isSelected ? TruceTheme.accentGreen : Colors.black87,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                )
+              else
+                 SliverToBoxAdapter(
+                   child: Container(
+                     height: 50,
+                     margin: const EdgeInsets.symmetric(vertical: 8),
+                     child: ListView.builder(
+                       scrollDirection: Axis.horizontal,
+                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                       itemCount: 5,
+                       itemBuilder: (context, index) => const Padding(
+                         padding: EdgeInsets.only(right: 8.0),
+                         child: ShimmerLoader(width: 80, height: 40, borderRadius: 20),
+                       ),
+                     ),
+                   ),
+                 ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    LocalStrings.get('market_products', locale),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              if (state is PricesLoading)
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => const ShimmerLoader(width: 200, height: 250, borderRadius: 16),
+                      childCount: 6,
+                    ),
+                  ),
+                )
+              else if (state is PricesError)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(state.message),
+                        ElevatedButton(
+                          onPressed: () => context.read<PricesCubit>().loadDashboard(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (state is PricesLoaded)
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final product = state.products[index];
+                        return _buildProductCard(context, product, locale);
+                      },
+                      childCount: state.products.length,
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text(
-                      LocalStrings.get('market_products', locale),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final product = state.products[index];
-                      return _buildProductCard(context, product, locale);
-                    },
-                    childCount: state.products.length,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-        return const SizedBox();
+            ],
+          ),
+        );
       },
     );
   }
@@ -183,65 +261,66 @@ class _HomeContent extends StatelessWidget {
         context,
         MaterialPageRoute(builder: (context) => ProductDetailsPage(product: product)),
       ),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[50],
                 ),
-                child: (product.imageUrl != null && product.imageUrl!.startsWith('http'))
-                    ? Image.network(product.imageUrl!, fit: BoxFit.contain,
-                        errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey))
-                    : const Icon(Icons.image_outlined, color: Colors.grey),
+                child: (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                    ? Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(child: ShimmerLoader(width: 100, height: 100));
+                        },
+                        errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                      )
+                    : const Icon(Icons.image_outlined, color: Colors.grey, size: 40),
               ),
-              const SizedBox(width: 16),
-              Expanded(
+            ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       locale == 'ar' ? product.nameAr : product.nameEn,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    const Spacer(),
                     if (lowestPrice != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          if (lowestPrice.previousPrice != null)
-                             Padding(
-                               padding: const EdgeInsets.only(right: 8.0),
-                               child: Text(
-                                 'EGP ${lowestPrice.previousPrice!.toStringAsFixed(2)}',
-                                 style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 10),
-                               ),
-                             ),
-                          Text(
-                            '${LocalStrings.get('lowest', locale)}: EGP ${lowestPrice.price.toStringAsFixed(2)}',
-                            style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                      Text(
+                        'EGP ${lowestPrice.price.toStringAsFixed(2)}',
+                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text(
-                        '${LocalStrings.get('at', locale)} ${locale == 'ar' ? lowestPrice.storeNameAr : lowestPrice.storeNameEn}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        locale == 'ar' ? lowestPrice.storeNameAr : lowestPrice.storeNameEn,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 11),
                       ),
-                    ] else
-                      const Text('No price available', style: TextStyle(color: Colors.grey)),
+                    ],
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

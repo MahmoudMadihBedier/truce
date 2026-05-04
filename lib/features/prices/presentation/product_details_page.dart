@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truce/core/utils/shimmer_loader.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/prices/domain/models.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,9 +9,16 @@ class ProductDetailsPage extends StatelessWidget {
   const ProductDetailsPage({super.key, required this.product});
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
+    final Uri uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback for some devices where canLaunchUrl is strict
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
     }
   }
 
@@ -32,9 +40,16 @@ class ProductDetailsPage extends StatelessWidget {
               child: Stack(
                 children: [
                    Center(
-                     child: product.imageUrl != null
-                        ? Image.network(product.imageUrl!, fit: BoxFit.contain,
-                            errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey))
+                     child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                        ? Image.network(
+                            product.imageUrl!,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return const Center(child: ShimmerLoader(width: 200, height: 200));
+                            },
+                            errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey),
+                          )
                         : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
                    ),
                    if (product.prices.isNotEmpty && product.prices.first.discountInfo != null)
@@ -159,7 +174,9 @@ class ProductDetailsPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               ElevatedButton(
-                onPressed: price.productUrl != null ? () => _launchUrl(price.productUrl!) : null,
+                onPressed: (price.productUrl != null && price.productUrl!.isNotEmpty)
+                  ? () => _launchUrl(price.productUrl!)
+                  : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: TruceTheme.primary,
                   foregroundColor: Colors.white,
