@@ -5,6 +5,7 @@ class Product {
   final String? descriptionEn;
   final String? descriptionAr;
   final String? imageUrl;
+  final int? categoryId;
   final List<ProductPrice> prices;
 
   Product({
@@ -14,17 +15,19 @@ class Product {
     this.descriptionEn,
     this.descriptionAr,
     this.imageUrl,
+    this.categoryId,
     this.prices = const [],
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id'],
-      nameEn: json['name_en'],
-      nameAr: json['name_ar'],
-      descriptionEn: json['description_en'],
-      descriptionAr: json['description_ar'],
-      imageUrl: json['image_url'],
+      nameEn: json['name_en'] ?? json['name'] ?? '',
+      nameAr: json['name_ar'] ?? json['name'] ?? '',
+      descriptionEn: json['description_en'] ?? json['description'],
+      descriptionAr: json['description_ar'] ?? json['description'],
+      imageUrl: json['image_url'] ?? json['image'],
+      categoryId: json['category_id'],
     );
   }
 }
@@ -51,6 +54,22 @@ class ProductPrice {
     this.productUrl,
     this.discountInfo,
   });
+}
+
+class Category {
+  final int id;
+  final String nameEn;
+  final String nameAr;
+
+  Category({required this.id, required this.nameEn, required this.nameAr});
+
+  factory Category.fromJson(Map<String, dynamic> json) {
+    return Category(
+      id: json['id'],
+      nameEn: json['name_en'],
+      nameAr: json['name_ar'],
+    );
+  }
 }
 
 class GoldPrice {

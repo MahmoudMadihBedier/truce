@@ -1,8 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:truce/core/usecases/usecase.dart';
 import 'package:truce/features/prices/domain/models.dart';
-import 'package:truce/features/prices/domain/usecases/get_dashboard_data.dart';
-import 'package:truce/features/prices/domain/usecases/search_products.dart';
+import 'package:truce/features/prices/domain/prices_repository.dart';
 
 sealed class PricesState {}
 class PricesInitial extends PricesState {}
@@ -11,7 +9,33 @@ class PricesLoaded extends PricesState {
   final List<CurrencyRate> currencyRates;
   final List<GoldPrice> goldPrices;
   final List<Product> products;
-  PricesLoaded({required this.currencyRates, required this.goldPrices, required this.products});
+  final List<Category> categories;
+  final int? selectedCategoryId;
+
+  PricesLoaded({
+    required this.currencyRates,
+    required this.goldPrices,
+    required this.products,
+    required this.categories,
+    this.selectedCategoryId
+  });
+
+  PricesLoaded copyWith({
+    List<CurrencyRate>? currencyRates,
+    List<GoldPrice>? goldPrices,
+    List<Product>? products,
+    List<Category>? categories,
+    int? selectedCategoryId,
+    bool clearCategory = false
+  }) {
+    return PricesLoaded(
+      currencyRates: currencyRates ?? this.currencyRates,
+      goldPrices: goldPrices ?? this.goldPrices,
+      products: products ?? this.products,
+      categories: categories ?? this.categories,
+      selectedCategoryId: clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
+    );
+  }
 }
 class PricesError extends PricesState {
   final String message;
@@ -19,39 +43,68 @@ class PricesError extends PricesState {
 }
 
 class PricesCubit extends Cubit<PricesState> {
-  final GetDashboardData _getDashboardData;
-  final SearchProducts _searchProducts;
+  final PricesRepository _repository;
 
-  PricesCubit(this._getDashboardData, this._searchProducts) : super(PricesInitial());
+  PricesCubit(this._repository) : super(PricesInitial());
 
-  Future<void> loadDashboard() async {
-    emit(PricesLoading());
-    final (failure, data) = await _getDashboardData(NoParams());
-    if (failure != null) {
-      emit(PricesError(failure.message));
-    } else if (data != null) {
-      emit(PricesLoaded(
-        currencyRates: data.$1,
-        goldPrices: data.$2,
-        products: data.$3,
-      ));
+  Future<void> loadDashboard({int? categoryId}) async {
+    final currentState = state;
+    List<Category> categories = [];
+    List<CurrencyRate> rates = [];
+    List<GoldPrice> gold = [];
+
+    if (currentState is PricesLoaded) {
+      categories = currentState.categories;
+      rates = currentState.currencyRates;
+      gold = currentState.goldPrices;
     }
+
+    emit(PricesLoading());
+
+    try {
+      if (categories.isEmpty) {
+        final catRes = await _repository.getCategories();
+        categories = catRes.$2 ?? [];
+      }
+
+      if (rates.isEmpty) {
+        final ratesRes = await _repository.getCurrencyRates();
+        rates = ratesRes.$2 ?? [];
+      }
+
+      if (gold.isEmpty) {
+        final goldRes = await _repository.getGoldPrices();
+        gold = goldRes.$2 ?? [];
+      }
+
+      final prodRes = await _repository.getProducts(categoryId: categoryId);
+      final products = prodRes.$2 ?? [];
+
+      emit(PricesLoaded(
+        currencyRates: rates,
+        goldPrices: gold,
+        products: products,
+        categories: categories,
+        selectedCategoryId: categoryId
+      ));
+    } catch (e) {
+      emit(PricesError(e.toString()));
+    }
+  }
+
+  Future<void> selectCategory(int? id) async {
+    await loadDashboard(categoryId: id);
   }
 
   Future<void> searchProducts(String query) async {
     final currentState = state;
     if (currentState is PricesLoaded) {
       emit(PricesLoading());
-      final (failure, products) = await _searchProducts(query);
-      if (failure != null) {
-        emit(PricesError(failure.message));
-      } else {
-        emit(PricesLoaded(
-          currencyRates: currentState.currencyRates,
-          goldPrices: currentState.goldPrices,
-          products: products ?? [],
-        ));
-      }
+      final prodRes = await _repository.getProducts(query: query);
+      emit(currentState.copyWith(
+        products: prodRes.$2 ?? [],
+        clearCategory: true
+      ));
     }
   }
 }
