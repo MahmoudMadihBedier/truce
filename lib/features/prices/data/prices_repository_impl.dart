@@ -15,7 +15,7 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
-      final searchTerm = query ?? 'iphone';
+      final searchTerm = query ?? 'phone';
 
       final response = await _httpClient.get(
         Uri.parse('https://mgqcolwglaavwazjwjir.supabase.co/functions/v1/product-aggregator?q=$searchTerm'),
@@ -28,9 +28,6 @@ class PricesRepositoryImpl implements PricesRepository {
         final List<dynamic> data = json.decode(response.body);
 
         final List<Product> products = data.map((item) {
-          final price = (item['price'] as num).toDouble();
-          final mrp = item['mrp'] != null ? (item['mrp'] as num).toDouble() : null;
-
           return Product(
             id: DateTime.now().millisecondsSinceEpoch + item.hashCode,
             nameEn: item['name'],
@@ -41,14 +38,12 @@ class PricesRepositoryImpl implements PricesRepository {
             prices: [
               ProductPrice(
                 id: 0,
-                price: price,
-                previousPrice: mrp,
+                price: (item['price'] as num).toDouble(),
                 storeNameEn: item['store'],
                 storeNameAr: _getStoreNameAr(item['store']),
                 storeRating: (item['rating'] as num).toDouble(),
                 isAvailable: true,
                 productUrl: item['url'],
-                discountInfo: item['discount'],
               )
             ],
           );
@@ -56,10 +51,10 @@ class PricesRepositoryImpl implements PricesRepository {
 
         return (null, products);
       } else {
-        return (ServerFailure('Backend Aggregator Error: ${response.statusCode}'), null);
+        return (ServerFailure('API Error: ${response.statusCode}'), null);
       }
     } catch (e) {
-      return (ServerFailure('Failed to fetch from aggregator: ${e.toString()}'), null);
+      return (ServerFailure('Network error: ${e.toString()}'), null);
     }
   }
 
@@ -75,17 +70,16 @@ class PricesRepositoryImpl implements PricesRepository {
     try {
       final response = await _client.from('gold_prices').select();
       final data = response as List<dynamic>;
-      return (null, data.map((g) => GoldPrice(
+      final List<GoldPrice> list = data.map((g) => GoldPrice(
         carat: g['carat'],
         buy: (g['price_buy'] as num).toDouble(),
         sell: (g['price_sell'] as num).toDouble(),
         updatedAt: DateTime.parse(g['updated_at']),
-      )).toList());
+      )).toList();
+      return (null, list);
     } catch (e) {
       return (null, [
         GoldPrice(carat: '24K', buy: 4200, sell: 4250, updatedAt: DateTime.now()),
-        GoldPrice(carat: '21K', buy: 3675, sell: 3720, updatedAt: DateTime.now()),
-        GoldPrice(carat: '18K', buy: 3150, sell: 3190, updatedAt: DateTime.now()),
       ]);
     }
   }
@@ -95,11 +89,12 @@ class PricesRepositoryImpl implements PricesRepository {
     try {
       final response = await _client.from('currency_rates').select();
       final data = response as List<dynamic>;
-      return (null, data.map((c) => CurrencyRate(
+      final List<CurrencyRate> list = data.map((c) => CurrencyRate(
         code: c['currency_code'],
         rateToEgp: (c['rate_to_egp'] as num).toDouble(),
         updatedAt: DateTime.parse(c['updated_at']),
-      )).toList());
+      )).toList();
+      return (null, list);
     } catch (e) {
       return (null, [
         CurrencyRate(code: 'USD', rateToEgp: 53.50, updatedAt: DateTime.now()),
