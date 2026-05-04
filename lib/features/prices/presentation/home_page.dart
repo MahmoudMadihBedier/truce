@@ -88,6 +88,7 @@ class _HomeContent extends StatelessWidget {
       builder: (context, state) {
         if (state is PricesInitial) {
           context.read<PricesCubit>().loadDashboard();
+          return const Center(child: CircularProgressIndicator());
         }
 
         return RefreshIndicator(
@@ -261,6 +262,7 @@ class _HomeContent extends StatelessWidget {
         MaterialPageRoute(builder: (context) => ProductDetailsPage(product: product)),
       ),
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -276,11 +278,17 @@ class _HomeContent extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
-                child: (product.imageUrl != null && product.imageUrl!.startsWith('http'))
-                    ? Image.network(product.imageUrl!, fit: BoxFit.contain,
-                        errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey))
+                child: (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                    ? Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(child: ShimmerLoader(width: 100, height: 100));
+                        },
+                        errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                      )
                     : const Icon(Icons.image_outlined, color: Colors.grey, size: 40),
               ),
             ),
