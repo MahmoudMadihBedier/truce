@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truce/core/utils/shimmer_loader.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/prices/domain/models.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,7 +14,8 @@ class ProductDetailsPage extends StatelessWidget {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        debugPrint('Could not launch $url');
+        // Fallback for some devices where canLaunchUrl is strict
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       debugPrint('Error launching URL: $e');
@@ -39,8 +41,15 @@ class ProductDetailsPage extends StatelessWidget {
                 children: [
                    Center(
                      child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                        ? Image.network(product.imageUrl!, fit: BoxFit.contain,
-                            errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey))
+                        ? Image.network(
+                            product.imageUrl!,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return const Center(child: ShimmerLoader(width: 200, height: 200));
+                            },
+                            errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey),
+                          )
                         : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
                    ),
                    if (product.prices.isNotEmpty && product.prices.first.discountInfo != null)
