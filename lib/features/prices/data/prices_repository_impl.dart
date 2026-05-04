@@ -15,26 +15,28 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
-      final searchTerm = query ?? 'phone';
+      String url = 'https://mgqcolwglaavwazjwjir.supabase.co/functions/v1/product-aggregator';
+      if (categoryId != null) {
+        url += '?category_id=$categoryId';
+      } else if (query != null) {
+        url += '?q=${Uri.encodeComponent(query)}';
+      }
 
       final response = await _httpClient.get(
-        Uri.parse('https://mgqcolwglaavwazjwjir.supabase.co/functions/v1/product-aggregator?q=$searchTerm'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-
-        final List<Product> products = data.map((item) {
+        final products = data.map((item) {
           return Product(
             id: DateTime.now().millisecondsSinceEpoch + item.hashCode,
             nameEn: item['name'],
             nameAr: item['name'],
             imageUrl: item['image'],
             descriptionEn: item['description'],
-            descriptionAr: item['description'],
+            categoryId: item['category_id'],
             prices: [
               ProductPrice(
                 id: 0,
@@ -48,13 +50,11 @@ class PricesRepositoryImpl implements PricesRepository {
             ],
           );
         }).toList();
-
         return (null, products);
-      } else {
-        return (ServerFailure('API Error: ${response.statusCode}'), null);
       }
+      return (ServerFailure('API Error'), null);
     } catch (e) {
-      return (ServerFailure('Network error: ${e.toString()}'), null);
+      return (ServerFailure(e.toString()), null);
     }
   }
 
@@ -63,6 +63,18 @@ class PricesRepositoryImpl implements PricesRepository {
     if (en.contains('Jumia')) return 'جوميا';
     if (en.contains('Carrefour')) return 'كارفور مصر';
     return en;
+  }
+
+  @override
+  Future<ApiResult<List<Category>>> getCategories() async {
+    try {
+      final response = await _client.from('categories').select().order('id');
+      final data = response as List<dynamic>;
+      final List<Category> list = data.map((item) => Category.fromJson(item)).toList();
+      return (null, list);
+    } catch (e) {
+      return (ServerFailure(e.toString()), null);
+    }
   }
 
   @override
@@ -78,9 +90,7 @@ class PricesRepositoryImpl implements PricesRepository {
       )).toList();
       return (null, list);
     } catch (e) {
-      return (null, [
-        GoldPrice(carat: '24K', buy: 4200, sell: 4250, updatedAt: DateTime.now()),
-      ]);
+      return (null, <GoldPrice>[]);
     }
   }
 
@@ -96,9 +106,7 @@ class PricesRepositoryImpl implements PricesRepository {
       )).toList();
       return (null, list);
     } catch (e) {
-      return (null, [
-        CurrencyRate(code: 'USD', rateToEgp: 53.50, updatedAt: DateTime.now()),
-      ]);
+      return (null, <CurrencyRate>[]);
     }
   }
 }
