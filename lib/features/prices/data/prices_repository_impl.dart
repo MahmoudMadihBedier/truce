@@ -16,53 +16,26 @@ class PricesRepositoryImpl implements PricesRepository {
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
       String url = 'https://mgqcolwglaavwazjwjir.supabase.co/functions/v1/product-aggregator';
-      if (categoryId != null) {
-        url += '?category_id=$categoryId';
-      } else if (query != null) {
-        url += '?q=${Uri.encodeComponent(query)}';
-      }
+      final params = <String, String>{};
+      if (categoryId != null) params['category_id'] = categoryId.toString();
+      if (query != null && query.isNotEmpty) params['q'] = query;
+
+      final uri = Uri.parse(url).replace(queryParameters: params);
 
       final response = await _httpClient.get(
-        Uri.parse(url),
+        uri,
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 45)); // Live search needs more time
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        final products = data.map((item) {
-          return Product(
-            id: DateTime.now().millisecondsSinceEpoch + item.hashCode,
-            nameEn: item['name'],
-            nameAr: item['name'],
-            imageUrl: item['image'],
-            descriptionEn: item['description'],
-            categoryId: item['category_id'],
-            prices: [
-              ProductPrice(
-                id: 0,
-                price: (item['price'] as num).toDouble(),
-                storeNameEn: item['store'],
-                storeNameAr: _getStoreNameAr(item['store']),
-                storeRating: (item['rating'] as num).toDouble(),
-                isAvailable: true,
-                productUrl: item['url'],
-              )
-            ],
-          );
-        }).toList();
+        final products = data.map((item) => Product.fromJson(item)).toList();
         return (null, products);
       }
-      return (ServerFailure('API Error'), null);
+      return (ServerFailure('Live search currently unavailable (${response.statusCode})'), null);
     } catch (e) {
-      return (ServerFailure(e.toString()), null);
+      return (ServerFailure('Connection error: $e'), null);
     }
-  }
-
-  String _getStoreNameAr(String en) {
-    if (en.contains('Amazon')) return 'أمازون مصر';
-    if (en.contains('Jumia')) return 'جوميا';
-    if (en.contains('Carrefour')) return 'كارفور مصر';
-    return en;
   }
 
   @override
