@@ -61,7 +61,7 @@ class ProductDetailsPage extends StatelessWidget {
                       const Icon(Icons.compare_arrows, color: TruceTheme.accentGreen),
                       const SizedBox(width: 8),
                       Text(
-                        'Live Comparison (${product.prices.length} Stores)',
+                        'Store Comparison (${product.prices.length})',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                       ),
                     ],
@@ -118,13 +118,7 @@ class ProductDetailsPage extends StatelessWidget {
                 if (price.location != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.location_on, size: 12, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(price.location!, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                      ],
-                    ),
+                    child: Text(price.location!, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                   ),
                 const SizedBox(height: 4),
                 Row(
@@ -148,6 +142,11 @@ class ProductDetailsPage extends StatelessWidget {
                   fontSize: 19
                 ),
               ),
+              if (price.mrp > price.price)
+                Text(
+                  'EGP ${price.mrp.toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 12),
+                ),
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: (price.productUrl != null && price.productUrl!.isNotEmpty)
