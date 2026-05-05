@@ -20,15 +20,38 @@ class Product {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    List<ProductPrice> parsedPrices = [];
+    if (json['all_prices'] != null) {
+      parsedPrices = (json['all_prices'] as List).map((p) => ProductPrice(
+        id: 0,
+        price: (p['price'] as num).toDouble(),
+        storeNameEn: p['store'],
+        storeNameAr: _getStoreNameAr(p['store']),
+        storeRating: (p['rating'] as num).toDouble(),
+        isAvailable: true,
+        productUrl: p['url'],
+        location: p['location'],
+      )).toList();
+      parsedPrices.sort((a, b) => a.price.compareTo(b.price));
+    }
+
     return Product(
-      id: json['id'],
+      id: json['id'] ?? DateTime.now().millisecondsSinceEpoch + json.hashCode,
       nameEn: json['name_en'] ?? json['name'] ?? '',
       nameAr: json['name_ar'] ?? json['name'] ?? '',
       descriptionEn: json['description_en'] ?? json['description'],
       descriptionAr: json['description_ar'] ?? json['description'],
       imageUrl: json['image_url'] ?? json['image'],
       categoryId: json['category_id'],
+      prices: parsedPrices,
     );
+  }
+
+  static String _getStoreNameAr(String en) {
+    if (en.contains('Amazon')) return 'أمازون مصر';
+    if (en.contains('Jumia')) return 'جوميا';
+    if (en.contains('Carrefour')) return 'كارفور مصر';
+    return en;
   }
 }
 
@@ -42,6 +65,7 @@ class ProductPrice {
   final bool isAvailable;
   final String? productUrl;
   final String? discountInfo;
+  final String? location;
 
   ProductPrice({
     required this.id,
@@ -53,6 +77,7 @@ class ProductPrice {
     required this.isAvailable,
     this.productUrl,
     this.discountInfo,
+    this.location,
   });
 }
 

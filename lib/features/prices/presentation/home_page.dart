@@ -26,7 +26,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     const _HomeContent(),
-    const Center(child: Text('Search - Use the Search Bar in Home')),
+    const Center(child: Text('Live Search in Home Feed')),
     const CouponsPage(),
     const SettingsPage(),
   ];
@@ -65,8 +65,8 @@ class _HomePageState extends State<HomePage> {
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+            BottomNavigationBarItem(icon: Icon(Icons.flash_on), label: 'Live Deals'),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Compare'),
             BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
             BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
           ],
@@ -129,8 +129,15 @@ class _HomeContent extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: SearchBar(
-                    hintText: LocalStrings.get('search_hint', locale),
+                    hintText: "Live search across Egypt...",
                     leading: const Icon(Icons.search),
+                    trailing: [
+                       if (state is PricesLoading)
+                         const Padding(
+                           padding: EdgeInsets.only(right: 8.0),
+                           child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                         )
+                    ],
                     onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
                     elevation: WidgetStateProperty.all(0),
                     backgroundColor: WidgetStateProperty.all(Colors.grey[200]),
@@ -138,7 +145,6 @@ class _HomeContent extends StatelessWidget {
                   ),
                 ),
               ),
-              // Categories Selector
               if (state is PricesLoaded)
                 SliverToBoxAdapter(
                   child: Container(
@@ -155,7 +161,7 @@ class _HomeContent extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: ChoiceChip(
-                            label: Text(isAll ? 'All' : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
+                            label: Text(isAll ? 'All Deals' : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
                             selected: isSelected,
                             onSelected: (_) => context.read<PricesCubit>().selectCategory(isAll ? null : state.categories[index - 1].id),
                             selectedColor: TruceTheme.accentGreen.withOpacity(0.2),
@@ -168,29 +174,19 @@ class _HomeContent extends StatelessWidget {
                       },
                     ),
                   ),
-                )
-              else
-                 SliverToBoxAdapter(
-                   child: Container(
-                     height: 50,
-                     margin: const EdgeInsets.symmetric(vertical: 8),
-                     child: ListView.builder(
-                       scrollDirection: Axis.horizontal,
-                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                       itemCount: 5,
-                       itemBuilder: (context, index) => const Padding(
-                         padding: EdgeInsets.only(right: 8.0),
-                         child: ShimmerLoader(width: 80, height: 40, borderRadius: 20),
-                       ),
-                     ),
-                   ),
-                 ),
+                ),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverToBoxAdapter(
-                  child: Text(
-                    LocalStrings.get('market_products', locale),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.live_tv, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Live Results (Egypt Market)",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -213,17 +209,21 @@ class _HomeContent extends StatelessWidget {
               else if (state is PricesError)
                 SliverFillRemaining(
                   child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text(state.message),
-                        ElevatedButton(
-                          onPressed: () => context.read<PricesCubit>().loadDashboard(),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.signal_wifi_connected_no_internet_4_outlined, size: 48, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          Text(state.message, textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => context.read<PricesCubit>().loadDashboard(),
+                            child: const Text('Try Again'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 )
@@ -301,7 +301,7 @@ class _HomeContent extends StatelessWidget {
                   children: [
                     Text(
                       locale == 'ar' ? product.nameAr : product.nameEn,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -309,11 +309,11 @@ class _HomeContent extends StatelessWidget {
                     if (lowestPrice != null) ...[
                       Text(
                         'EGP ${lowestPrice.price.toStringAsFixed(2)}',
-                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold, fontSize: 15),
+                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       Text(
-                        locale == 'ar' ? lowestPrice.storeNameAr : lowestPrice.storeNameEn,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 10),
+                        lowestPrice.storeNameEn,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 9),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
