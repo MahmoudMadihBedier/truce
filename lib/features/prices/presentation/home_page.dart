@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/marquee_ticker.dart';
-import 'package:truce/core/utils/shimmer_loader.dart';
+
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/auth/presentation/auth_dialog.dart';
@@ -26,7 +26,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     const _HomeContent(),
-    const Center(child: Text('Live Egypt Search')),
+    const _SearchContent(),
     const CouponsPage(),
     const SettingsPage(),
   ];
@@ -52,6 +52,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<SettingsCubit>().state.locale.languageCode;
     return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated || state is AuthGuest) {
@@ -64,11 +65,11 @@ class _HomePageState extends State<HomePage> {
           selectedItemColor: TruceTheme.accentGreen,
           unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.flash_on), label: 'Live Deals'),
-            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-            BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          items: [
+            BottomNavigationBarItem(icon: const Icon(Icons.flash_on), label: LocalStrings.get('live_deals', locale)),
+            BottomNavigationBarItem(icon: const Icon(Icons.search), label: LocalStrings.get('search', locale)),
+            BottomNavigationBarItem(icon: const Icon(Icons.local_offer), label: LocalStrings.get('coupons', locale)),
+            BottomNavigationBarItem(icon: const Icon(Icons.settings), label: LocalStrings.get('settings', locale)),
           ],
           onTap: (index) => setState(() => _currentIndex = index),
         ),
@@ -129,15 +130,8 @@ class _HomeContent extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: SearchBar(
-                    hintText: "Live Market Search (Jumia, Amazon...)",
+                    hintText: LocalStrings.get('search_hint', locale),
                     leading: const Icon(Icons.search),
-                    trailing: [
-                       if (state is PricesLoading)
-                         const Padding(
-                           padding: EdgeInsets.only(right: 8.0),
-                           child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: TruceTheme.accentGreen)),
-                         )
-                    ],
                     onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
                     elevation: WidgetStateProperty.all(0),
                     backgroundColor: WidgetStateProperty.all(Colors.grey[200]),
@@ -161,7 +155,7 @@ class _HomeContent extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: ChoiceChip(
-                            label: Text(isAll ? 'Egypt Deals' : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
+                            label: Text(isAll ? (locale == 'ar' ? 'عروض مصر' : 'Egypt Deals') : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
                             selected: isSelected,
                             onSelected: (_) => context.read<PricesCubit>().selectCategory(isAll ? null : state.categories[index - 1].id),
                             selectedColor: TruceTheme.accentGreen.withOpacity(0.2),
@@ -175,51 +169,22 @@ class _HomeContent extends StatelessWidget {
                     ),
                   ),
                 ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverToBoxAdapter(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.live_tv_rounded, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "Live Accuracy Hub",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               if (state is PricesLoading)
-                SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.62,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => const ShimmerLoader(width: 200, height: 260, borderRadius: 16),
-                      childCount: 6,
-                    ),
-                  ),
-                )
+                const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: TruceTheme.accentGreen)))
               else if (state is PricesLoaded)
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.62,
+                      childAspectRatio: 0.58,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final product = state.products[index];
-                        return _buildProductCard(context, product, locale);
+                        return _ProductCard(product: product, locale: locale);
                       },
                       childCount: state.products.length,
                     ),
@@ -231,8 +196,60 @@ class _HomeContent extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _buildProductCard(BuildContext context, Product product, String locale) {
+class _SearchContent extends StatelessWidget {
+  const _SearchContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = context.watch<SettingsCubit>().state.locale.languageCode;
+    return BlocBuilder<PricesCubit, PricesState>(
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(title: Text(LocalStrings.get('search', locale))),
+          body: Column(
+            children: [
+               Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SearchBar(
+                  hintText: LocalStrings.get('search_hint', locale),
+                  onSubmitted: (q) => context.read<PricesCubit>().searchProducts(q),
+                ),
+              ),
+              if (state is PricesLoading)
+                const Expanded(child: Center(child: CircularProgressIndicator()))
+              else if (state is PricesLoaded)
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: state.products.length,
+                    itemBuilder: (context, index) {
+                      final p = state.products[index];
+                      return ListTile(
+                        leading: p.imageUrl != null ? Image.network(p.imageUrl!, width: 50) : null,
+                        title: Text(locale == 'ar' ? p.nameAr : p.nameEn),
+                        subtitle: Text('EGP ${p.prices.first.price}'),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetailsPage(product: p))),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+}
+
+class _ProductCard extends StatelessWidget {
+  final Product product;
+  final String locale;
+
+  const _ProductCard({required this.product, required this.locale});
+
+  @override
+  Widget build(BuildContext context) {
     final lowestPrice = product.prices.isNotEmpty ? product.prices.first : null;
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -254,17 +271,11 @@ class _HomeContent extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                ),
+                decoration: BoxDecoration(color: Colors.grey[50]),
                 child: (product.imageUrl != null && product.imageUrl!.isNotEmpty)
                     ? Image.network(
                         product.imageUrl!,
                         fit: BoxFit.contain,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return const Center(child: ShimmerLoader(width: 60, height: 60));
-                        },
                         errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, color: Colors.grey),
                       )
                     : const Icon(Icons.image_outlined, color: Colors.grey, size: 40),
@@ -279,7 +290,7 @@ class _HomeContent extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      product.nameEn,
+                      locale == 'ar' ? product.nameAr : product.nameEn,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -310,7 +321,7 @@ class _HomeContent extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
                           child: Text(
-                            '+${product.prices.length - 1} OTHER STORES',
+                            '+${product.prices.length - 1} ${LocalStrings.get('other_stores', locale)}',
                             style: const TextStyle(color: Colors.orange, fontSize: 7, fontWeight: FontWeight.bold),
                           ),
                         ),

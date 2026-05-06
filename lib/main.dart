@@ -11,6 +11,8 @@ import 'package:truce/features/prices/presentation/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Suppress specific library warnings if needed, or keep for debugging
+
   await Supabase.initialize(
     url: 'https://mgqcolwglaavwazjwjir.supabase.co',
     anonKey: 'sb_publishable_52t3OZTL4k39wQf8DfrH_g_X7n73_vE',
