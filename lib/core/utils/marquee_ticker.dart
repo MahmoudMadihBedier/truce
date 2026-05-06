@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:truce/core/utils/theme.dart';
 
@@ -13,6 +14,9 @@ class MarqueeTicker extends StatefulWidget {
 
 class _MarqueeTickerState extends State<MarqueeTicker> {
   late ScrollController _scrollController;
+  Timer? _timer;
+  static const double _step = 1.0;
+  static const Duration _frequency = Duration(milliseconds: 30);
 
   @override
   void initState() {
@@ -21,49 +25,48 @@ class _MarqueeTickerState extends State<MarqueeTicker> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _startScrolling());
   }
 
-  void _startScrolling() async {
-    while (_scrollController.hasClients) {
-      await Future.delayed(const Duration(milliseconds: 50));
+  void _startScrolling() {
+    _timer = Timer.periodic(_frequency, (timer) {
       if (_scrollController.hasClients) {
-        final maxExtent = _scrollController.position.maxScrollExtent;
-        final currentPosition = _scrollController.offset;
+        final double maxExtent = _scrollController.position.maxScrollExtent;
+        final double currentPosition = _scrollController.offset;
+
         if (currentPosition >= maxExtent) {
           _scrollController.jumpTo(0);
         } else {
-          _scrollController.animateTo(
-            currentPosition + 1,
-            duration: const Duration(milliseconds: 50),
-            curve: Curves.linear,
-          );
+          _scrollController.jumpTo(currentPosition + _step);
         }
       }
-    }
+    });
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Duplicate children to ensure continuous scrolling
+    final List<Widget> items = [...widget.children, ...widget.children];
+
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
         height: 40,
         color: TruceTheme.primaryContainer,
-        child: ListView.builder(
+        child: SingleChildScrollView(
           controller: _scrollController,
           scrollDirection: Axis.horizontal,
-          itemBuilder: (context, index) {
-            return Row(
-              children: widget.children.map((child) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: child,
-              )).toList(),
-            );
-          },
+          physics: const NeverScrollableScrollPhysics(),
+          child: Row(
+            children: items.map((child) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: child,
+            )).toList(),
+          ),
         ),
       ),
     );
