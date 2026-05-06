@@ -26,7 +26,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     const _HomeContent(),
-    const Center(child: Text('Live Search in Home Feed')),
+    const Center(child: Text('Live Egypt Search')),
     const CouponsPage(),
     const SettingsPage(),
   ];
@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage> {
           type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.flash_on), label: 'Live Deals'),
-            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Compare'),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
             BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Coupons'),
             BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
           ],
@@ -101,9 +101,9 @@ class _HomeContent extends StatelessWidget {
                 floating: true,
                 title: Row(
                   children: [
-                    Image.asset('assets/images/logo.png', height: 32),
-                    const SizedBox(width: 8),
-                    Text(LocalStrings.get('app_title', locale), style: const TextStyle(fontSize: 20)),
+                    Image.asset('assets/images/logo.png', height: 38),
+                    const SizedBox(width: 10),
+                    Text(LocalStrings.get('app_title', locale), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -129,13 +129,13 @@ class _HomeContent extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: SearchBar(
-                    hintText: "Live search across Egypt...",
+                    hintText: "Live Market Search (Jumia, Amazon...)",
                     leading: const Icon(Icons.search),
                     trailing: [
                        if (state is PricesLoading)
                          const Padding(
                            padding: EdgeInsets.only(right: 8.0),
-                           child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                           child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: TruceTheme.accentGreen)),
                          )
                     ],
                     onSubmitted: (query) => context.read<PricesCubit>().searchProducts(query),
@@ -161,7 +161,7 @@ class _HomeContent extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: ChoiceChip(
-                            label: Text(isAll ? 'All Deals' : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
+                            label: Text(isAll ? 'Egypt Deals' : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
                             selected: isSelected,
                             onSelected: (_) => context.read<PricesCubit>().selectCategory(isAll ? null : state.categories[index - 1].id),
                             selectedColor: TruceTheme.accentGreen.withOpacity(0.2),
@@ -180,10 +180,10 @@ class _HomeContent extends StatelessWidget {
                 sliver: SliverToBoxAdapter(
                   child: Row(
                     children: [
-                      const Icon(Icons.live_tv, color: Colors.red, size: 18),
+                      const Icon(Icons.live_tv_rounded, color: Colors.red, size: 20),
                       const SizedBox(width: 8),
                       const Text(
-                        "Live Results (Egypt Market)",
+                        "Live Accuracy Hub",
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -196,7 +196,7 @@ class _HomeContent extends StatelessWidget {
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.64,
+                      childAspectRatio: 0.62,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
                     ),
@@ -206,34 +206,13 @@ class _HomeContent extends StatelessWidget {
                     ),
                   ),
                 )
-              else if (state is PricesError)
-                SliverFillRemaining(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.signal_wifi_connected_no_internet_4_outlined, size: 48, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          Text(state.message, textAlign: TextAlign.center),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => context.read<PricesCubit>().loadDashboard(),
-                            child: const Text('Try Again'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
               else if (state is PricesLoaded)
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.64,
+                      childAspectRatio: 0.62,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
                     ),
@@ -300,8 +279,8 @@ class _HomeContent extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      locale == 'ar' ? product.nameAr : product.nameEn,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      product.nameEn,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -309,14 +288,32 @@ class _HomeContent extends StatelessWidget {
                     if (lowestPrice != null) ...[
                       Text(
                         'EGP ${lowestPrice.price.toStringAsFixed(2)}',
-                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold, fontSize: 14),
+                        style: const TextStyle(color: TruceTheme.accentGreen, fontWeight: FontWeight.bold, fontSize: 13),
                       ),
-                      Text(
-                        lowestPrice.storeNameEn,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 9),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          const Icon(Icons.storefront_outlined, size: 10, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              lowestPrice.storeNameEn,
+                              style: TextStyle(color: Colors.grey[600], fontSize: 9),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
+                      if (product.prices.length > 1)
+                        Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                          child: Text(
+                            '+${product.prices.length - 1} OTHER STORES',
+                            style: const TextStyle(color: Colors.orange, fontSize: 7, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                     ],
                   ],
                 ),
