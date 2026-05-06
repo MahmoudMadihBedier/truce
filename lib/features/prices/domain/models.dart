@@ -1,11 +1,9 @@
 class Product {
-  final int id;
+  final String id;
   final String nameEn;
   final String nameAr;
   final String? descriptionEn;
-  final String? descriptionAr;
   final String? imageUrl;
-  final int? categoryId;
   final List<ProductPrice> prices;
 
   Product({
@@ -13,47 +11,65 @@ class Product {
     required this.nameEn,
     required this.nameAr,
     this.descriptionEn,
-    this.descriptionAr,
     this.imageUrl,
-    this.categoryId,
     this.prices = const [],
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    List<ProductPrice> parsedPrices = [];
+
+    // Check if it's a grouped product or a flat scraper result
+    if (json['Other Stores'] != null) {
+      parsedPrices = (json['Other Stores'] as List).map((p) => ProductPrice.fromJson(p)).toList();
+    } else {
+      parsedPrices = [ProductPrice.fromJson(json)];
+    }
+
     return Product(
-      id: json['id'],
-      nameEn: json['name_en'] ?? json['name'] ?? '',
-      nameAr: json['name_ar'] ?? json['name'] ?? '',
-      descriptionEn: json['description_en'] ?? json['description'],
-      descriptionAr: json['description_ar'] ?? json['description'],
-      imageUrl: json['image_url'] ?? json['image'],
-      categoryId: json['category_id'],
+      id: json['Product ID']?.toString() ?? json['Sr No']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      nameEn: json['Product Name'] ?? 'Product',
+      nameAr: json['Product Name'] ?? 'منتج',
+      descriptionEn: json['Description'],
+      imageUrl: json['Product Image URL'],
+      prices: parsedPrices,
     );
   }
 }
 
 class ProductPrice {
-  final int id;
   final double price;
-  final double? previousPrice;
+  final double mrp;
+  final String discountPercent;
   final String storeNameEn;
-  final String storeNameAr;
   final double storeRating;
-  final bool isAvailable;
   final String? productUrl;
-  final String? discountInfo;
+  final String? location;
 
   ProductPrice({
-    required this.id,
     required this.price,
-    this.previousPrice,
+    required this.mrp,
+    required this.discountPercent,
     required this.storeNameEn,
-    required this.storeNameAr,
     required this.storeRating,
-    required this.isAvailable,
     this.productUrl,
-    this.discountInfo,
+    this.location,
   });
+
+  factory ProductPrice.fromJson(Map<String, dynamic> json) {
+    final priceValue = (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0);
+    final mrpValue = (json['MRP (EGP)'] is num ? (json['MRP (EGP)'] as num).toDouble() :
+                    (json['MRP'] is num ? (json['MRP'] as num).toDouble() : priceValue));
+
+    return ProductPrice(
+      price: priceValue,
+      mrp: mrpValue,
+      discountPercent: (json['Discount %'] ?? json['Discount'] ?? '0').toString(),
+      storeNameEn: json['Store'] ?? json['Store Name'] ?? 'Market',
+      storeRating: (json['Rating'] is num ? (json['Rating'] as num).toDouble() : 4.5),
+      productUrl: json['Product URL'] ?? json['URL'],
+      location: json['Location'] ?? (json['Store'] != null ? 'Egypt' : null),
+    );
+  }
 }
 
 class Category {
@@ -65,9 +81,9 @@ class Category {
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: json['id'],
-      nameEn: json['name_en'],
-      nameAr: json['name_ar'],
+      id: json['id'] ?? 0,
+      nameEn: json['name_en'] ?? '',
+      nameAr: json['name_ar'] ?? '',
     );
   }
 }

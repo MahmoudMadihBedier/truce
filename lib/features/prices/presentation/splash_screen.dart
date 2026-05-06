@@ -28,14 +28,14 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TruceTheme.primary,
+      backgroundColor: TruceTheme.surfaceLight,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset('assets/images/logo.png', height: 120),
             const SizedBox(height: 24),
-            const CircularProgressIndicator(color: Colors.white),
+            const CircularProgressIndicator(color: Color.fromARGB(255, 119, 118, 118)),
           ],
         ),
       ),

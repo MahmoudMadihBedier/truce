@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/shimmer_loader.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/prices/domain/models.dart';
+import 'package:truce/features/settings/presentation/settings_cubit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetailsPage extends StatelessWidget {
@@ -11,12 +14,7 @@ class ProductDetailsPage extends StatelessWidget {
   Future<void> _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        // Fallback for some devices where canLaunchUrl is strict
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       debugPrint('Error launching URL: $e');
     }
@@ -24,9 +22,10 @@ class ProductDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<SettingsCubit>().state.locale.languageCode;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Product Details | تفاصيل المنتج'),
+        title: Text(LocalStrings.get('live_comparison', locale)),
         leading: const BackButton(),
       ),
       body: SingleChildScrollView(
@@ -37,38 +36,18 @@ class ProductDetailsPage extends StatelessWidget {
               height: 300,
               width: double.infinity,
               color: Colors.white,
-              child: Stack(
-                children: [
-                   Center(
-                     child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                        ? Image.network(
-                            product.imageUrl!,
-                            fit: BoxFit.contain,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return const Center(child: ShimmerLoader(width: 200, height: 200));
-                            },
-                            errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey),
-                          )
-                        : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
-                   ),
-                   if (product.prices.isNotEmpty && product.prices.first.discountInfo != null)
-                      Positioned(
-                        top: 20,
-                        right: 20,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            product.prices.first.discountInfo!,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                        ),
-                      ),
-                ],
+              child: Center(
+                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                   ? Image.network(
+                       product.imageUrl!,
+                       fit: BoxFit.contain,
+                       loadingBuilder: (context, child, progress) {
+                         if (progress == null) return child;
+                         return const Center(child: ShimmerLoader(width: 200, height: 200));
+                       },
+                       errorBuilder: (c, e, s) => const Icon(Icons.broken_image_outlined, size: 100, color: Colors.grey),
+                     )
+                   : const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
               ),
             ),
             Padding(
@@ -77,31 +56,37 @@ class ProductDetailsPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.nameEn,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                    locale == 'ar' ? product.nameAr : product.nameEn,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Icon(Icons.compare_arrows, color: TruceTheme.accentGreen),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${LocalStrings.get('live_comparison', locale)} (${product.prices.length} ${LocalStrings.get('search', locale)})',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
+                  if (product.prices.isEmpty)
+                    const Center(child: Text('Live search currently analyzing prices...'))
+                  else
+                    ...product.prices.map((p) => _buildStorePriceTile(context, p, locale)),
+                  const SizedBox(height: 24),
                   if (product.descriptionEn != null) ...[
-                    const Text(
-                      'Description | الوصف',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                    Text(
+                      LocalStrings.get('details', locale),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       product.descriptionEn!,
-                      style: TextStyle(color: Colors.grey[700], height: 1.5),
+                      style: TextStyle(color: Colors.grey[700], height: 1.6, fontSize: 14),
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Best Offer | أفضل عرض',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: TruceTheme.primary),
-                  ),
-                  const SizedBox(height: 12),
-                  if (product.prices.isEmpty)
-                    const Center(child: Text('Price Currently N/A'))
-                  else
-                    ...product.prices.map((p) => _buildStorePriceTile(context, p)),
                 ],
               ),
             ),
@@ -111,14 +96,15 @@ class ProductDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStorePriceTile(BuildContext context, ProductPrice price) {
+  Widget _buildStorePriceTile(BuildContext context, ProductPrice price, String locale) {
+    final isLowest = price == product.prices.first;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: isLowest ? TruceTheme.accentGreen : Colors.grey.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
         ],
@@ -131,26 +117,19 @@ class ProductDetailsPage extends StatelessWidget {
               children: [
                 Text(
                   price.storeNameEn,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: TruceTheme.primary),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: TruceTheme.primary),
                 ),
+                if (price.location != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(price.location!, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                    const Icon(Icons.star, color: Colors.amber, size: 14),
                     const SizedBox(width: 4),
-                    Text(
-                      price.storeRating.toString(),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      price.isAvailable ? 'In Stock' : 'Out of Stock',
-                      style: TextStyle(
-                        color: price.isAvailable ? Colors.green : Colors.red,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold
-                      ),
-                    ),
+                    Text(price.storeRating.toStringAsFixed(1), style: const TextStyle(fontSize: 13)),
                   ],
                 ),
               ],
@@ -159,30 +138,31 @@ class ProductDetailsPage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (price.previousPrice != null)
-                Text(
-                  'EGP ${price.previousPrice!.toStringAsFixed(2)}',
-                  style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 14),
-                ),
               Text(
                 'EGP ${price.price.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  color: TruceTheme.accentGreen,
+                style: TextStyle(
+                  color: isLowest ? TruceTheme.accentGreen : Colors.black,
                   fontWeight: FontWeight.bold,
-                  fontSize: 22,
+                  fontSize: 19
                 ),
               ),
+              if (price.mrp > price.price)
+                Text(
+                  'EGP ${price.mrp.toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 12),
+                ),
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: (price.productUrl != null && price.productUrl!.isNotEmpty)
                   ? () => _launchUrl(price.productUrl!)
                   : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: TruceTheme.primary,
+                  backgroundColor: isLowest ? TruceTheme.accentGreen : TruceTheme.primary,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(100, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  minimumSize: const Size(100, 32),
                 ),
-                child: const Text('Visit Store'),
+                child: Text(LocalStrings.get('visit_store', locale)),
               ),
             ],
           ),
