@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:truce/core/error/failures.dart';
 import 'package:truce/core/utils/typedefs.dart';
+import 'package:truce/core/utils/constants.dart';
 import 'package:truce/features/coupons/domain/models.dart';
 import 'package:truce/features/coupons/domain/coupons_repository.dart';
 
@@ -10,15 +11,12 @@ class CouponsRepositoryImpl implements CouponsRepository {
   final SupabaseClient _client;
   final http.Client _httpClient = http.Client();
 
-  static const String _baseUrl = 'http://localhost:8000';
-
   CouponsRepositoryImpl(this._client);
 
   @override
   Future<ApiResult<List<Coupon>>> getCoupons() async {
     try {
-      // First try backend for fresh coupons
-      final response = await _httpClient.get(Uri.parse('$_baseUrl/coupons'));
+      final response = await _httpClient.get(Uri.parse('${Constants.apiBaseUrl}/coupons'));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -35,7 +33,6 @@ class CouponsRepositoryImpl implements CouponsRepository {
         }).toList());
       }
 
-      // Fallback to Supabase
       final supabaseResponse = await _client.from('coupons').select('*, stores(name_en, name_ar)');
       final supabaseData = supabaseResponse as List<dynamic>;
       return (null, supabaseData.map((item) => Coupon.fromJson(item)).toList());
