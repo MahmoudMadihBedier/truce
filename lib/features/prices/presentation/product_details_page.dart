@@ -61,7 +61,7 @@ class ProductDetailsPage extends StatelessWidget {
                       const Icon(Icons.compare_arrows, color: TruceTheme.accentGreen),
                       const SizedBox(width: 8),
                       Text(
-                        'Store Comparison (${product.prices.length})',
+                        'Live Comparison (${product.prices.length} Stores)',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                       ),
                     ],
@@ -80,7 +80,7 @@ class ProductDetailsPage extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       product.descriptionEn!,
-                      style: TextStyle(color: Colors.grey[700], height: 1.5),
+                      style: TextStyle(color: Colors.grey[700], height: 1.6, fontSize: 14),
                     ),
                   ],
                 ],

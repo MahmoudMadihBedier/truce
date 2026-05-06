@@ -19,22 +19,14 @@ class Product {
     List<ProductPrice> parsedPrices = [];
 
     if (json['Other Stores'] != null) {
-      parsedPrices = (json['Other Stores'] as List).map((p) => ProductPrice(
-        price: (p['Price'] as num).toDouble(),
-        mrp: (p['MRP'] as num).toDouble(),
-        discountPercent: p['Discount'].toString(),
-        storeNameEn: p['Store'],
-        storeRating: (p['Rating'] as num).toDouble(),
-        productUrl: p['URL'],
-        location: p['Location'],
-      )).toList();
+      parsedPrices = (json['Other Stores'] as List).map((p) => ProductPrice.fromJson(p)).toList();
     } else {
       parsedPrices = [
         ProductPrice(
-          price: (json['Price'] as num).toDouble(),
-          mrp: (json['MRP (EGP)'] as num).toDouble(),
-          discountPercent: json['Discount %'].toString(),
-          storeNameEn: _inferStore(json['Product URL'] ?? ''),
+          price: (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0),
+          mrp: (json['MRP (EGP)'] is num ? (json['MRP (EGP)'] as num).toDouble() : 0.0),
+          discountPercent: json['Discount %']?.toString() ?? '0',
+          storeNameEn: json['Store Name'] ?? 'Market',
           storeRating: 4.5,
           productUrl: json['Product URL'],
         )
@@ -44,18 +36,11 @@ class Product {
     return Product(
       id: json['Product ID']?.toString() ?? json['Sr No']?.toString() ?? '',
       nameEn: json['Product Name'] ?? '',
-      nameAr: json['Product Name'] ?? '', // Fallback to EN if AR not provided by live engine
+      nameAr: json['Product Name'] ?? '',
       descriptionEn: json['Description'],
       imageUrl: json['Product Image URL'],
       prices: parsedPrices,
     );
-  }
-
-  static String _inferStore(String url) {
-    if (url.contains('amazon')) return 'Amazon Egypt';
-    if (url.contains('jumia')) return 'Jumia';
-    if (url.contains('carrefour')) return 'Carrefour';
-    return 'Market';
   }
 }
 
@@ -77,6 +62,18 @@ class ProductPrice {
     this.productUrl,
     this.location,
   });
+
+  factory ProductPrice.fromJson(Map<String, dynamic> json) {
+    return ProductPrice(
+      price: (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0),
+      mrp: (json['MRP'] is num ? (json['MRP'] as num).toDouble() : (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0)),
+      discountPercent: json['Discount']?.toString() ?? '0',
+      storeNameEn: json['Store'] ?? 'Market',
+      storeRating: (json['Rating'] is num ? (json['Rating'] as num).toDouble() : 4.0),
+      productUrl: json['URL'],
+      location: json['Location'],
+    );
+  }
 }
 
 class Category {
