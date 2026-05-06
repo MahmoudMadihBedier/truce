@@ -18,25 +18,17 @@ class Product {
   factory Product.fromJson(Map<String, dynamic> json) {
     List<ProductPrice> parsedPrices = [];
 
+    // Check if it's a grouped product or a flat scraper result
     if (json['Other Stores'] != null) {
       parsedPrices = (json['Other Stores'] as List).map((p) => ProductPrice.fromJson(p)).toList();
     } else {
-      parsedPrices = [
-        ProductPrice(
-          price: (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0),
-          mrp: (json['MRP (EGP)'] is num ? (json['MRP (EGP)'] as num).toDouble() : 0.0),
-          discountPercent: json['Discount %']?.toString() ?? '0',
-          storeNameEn: json['Store Name'] ?? 'Market',
-          storeRating: 4.5,
-          productUrl: json['Product URL'],
-        )
-      ];
+      parsedPrices = [ProductPrice.fromJson(json)];
     }
 
     return Product(
-      id: json['Product ID']?.toString() ?? json['Sr No']?.toString() ?? '',
-      nameEn: json['Product Name'] ?? '',
-      nameAr: json['Product Name'] ?? '',
+      id: json['Product ID']?.toString() ?? json['Sr No']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      nameEn: json['Product Name'] ?? 'Product',
+      nameAr: json['Product Name'] ?? 'منتج',
       descriptionEn: json['Description'],
       imageUrl: json['Product Image URL'],
       prices: parsedPrices,
@@ -64,14 +56,18 @@ class ProductPrice {
   });
 
   factory ProductPrice.fromJson(Map<String, dynamic> json) {
+    final priceValue = (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0);
+    final mrpValue = (json['MRP (EGP)'] is num ? (json['MRP (EGP)'] as num).toDouble() :
+                    (json['MRP'] is num ? (json['MRP'] as num).toDouble() : priceValue));
+
     return ProductPrice(
-      price: (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0),
-      mrp: (json['MRP'] is num ? (json['MRP'] as num).toDouble() : (json['Price'] is num ? (json['Price'] as num).toDouble() : 0.0)),
-      discountPercent: json['Discount']?.toString() ?? '0',
-      storeNameEn: json['Store'] ?? 'Market',
-      storeRating: (json['Rating'] is num ? (json['Rating'] as num).toDouble() : 4.0),
-      productUrl: json['URL'],
-      location: json['Location'],
+      price: priceValue,
+      mrp: mrpValue,
+      discountPercent: (json['Discount %'] ?? json['Discount'] ?? '0').toString(),
+      storeNameEn: json['Store'] ?? json['Store Name'] ?? 'Market',
+      storeRating: (json['Rating'] is num ? (json['Rating'] as num).toDouble() : 4.5),
+      productUrl: json['Product URL'] ?? json['URL'],
+      location: json['Location'] ?? (json['Store'] != null ? 'Egypt' : null),
     );
   }
 }
@@ -85,9 +81,9 @@ class Category {
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: json['id'],
-      nameEn: json['name_en'],
-      nameAr: json['name_ar'],
+      id: json['id'] ?? 0,
+      nameEn: json['name_en'] ?? '',
+      nameAr: json['name_ar'] ?? '',
     );
   }
 }

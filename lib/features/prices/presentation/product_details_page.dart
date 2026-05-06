@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/shimmer_loader.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/prices/domain/models.dart';
+import 'package:truce/features/settings/presentation/settings_cubit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetailsPage extends StatelessWidget {
@@ -19,9 +22,10 @@ class ProductDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<SettingsCubit>().state.locale.languageCode;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Live Market View'),
+        title: Text(LocalStrings.get('live_comparison', locale)),
         leading: const BackButton(),
       ),
       body: SingleChildScrollView(
@@ -52,7 +56,7 @@ class ProductDetailsPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.nameEn,
+                    locale == 'ar' ? product.nameAr : product.nameEn,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                   ),
                   const SizedBox(height: 20),
@@ -61,7 +65,7 @@ class ProductDetailsPage extends StatelessWidget {
                       const Icon(Icons.compare_arrows, color: TruceTheme.accentGreen),
                       const SizedBox(width: 8),
                       Text(
-                        'Live Comparison (${product.prices.length} Stores)',
+                        '${LocalStrings.get('live_comparison', locale)} (${product.prices.length} ${LocalStrings.get('search', locale)})',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                       ),
                     ],
@@ -70,12 +74,12 @@ class ProductDetailsPage extends StatelessWidget {
                   if (product.prices.isEmpty)
                     const Center(child: Text('Live search currently analyzing prices...'))
                   else
-                    ...product.prices.map((p) => _buildStorePriceTile(context, p)),
+                    ...product.prices.map((p) => _buildStorePriceTile(context, p, locale)),
                   const SizedBox(height: 24),
                   if (product.descriptionEn != null) ...[
-                    const Text(
-                      'Details',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: TruceTheme.primary),
+                    Text(
+                      LocalStrings.get('details', locale),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: TruceTheme.primary),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -92,7 +96,7 @@ class ProductDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStorePriceTile(BuildContext context, ProductPrice price) {
+  Widget _buildStorePriceTile(BuildContext context, ProductPrice price, String locale) {
     final isLowest = price == product.prices.first;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -158,7 +162,7 @@ class ProductDetailsPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   minimumSize: const Size(100, 32),
                 ),
-                child: const Text('Visit Store'),
+                child: Text(LocalStrings.get('visit_store', locale)),
               ),
             ],
           ),

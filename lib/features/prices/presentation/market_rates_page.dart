@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/prices/presentation/prices_cubit.dart';
+import 'package:truce/features/settings/presentation/settings_cubit.dart';
 
 class MarketRatesPage extends StatelessWidget {
   const MarketRatesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<SettingsCubit>().state.locale.languageCode;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Market Rates | أسعار السوق'),
+        title: Text(LocalStrings.get('market_rates', locale)),
         leading: const BackButton(),
       ),
       body: BlocBuilder<PricesCubit, PricesState>(
@@ -19,13 +22,13 @@ class MarketRatesPage extends StatelessWidget {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text('Currency Rates', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(LocalStrings.get('currency_rates', locale), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 ...state.currencyRates.map((c) => _buildRateCard('${c.code}/EGP', c.rateToEgp.toString(), Icons.currency_exchange)),
                 const SizedBox(height: 24),
-                const Text('Gold Prices', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(LocalStrings.get('gold_prices', locale), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                ...state.goldPrices.map((g) => _buildRateCard('Gold ${g.carat}', '${g.sell} EGP', Icons.brightness_high)),
+                ...state.goldPrices.map((g) => _buildRateCard('${LocalStrings.get('gold', locale)} ${g.carat}', '${g.sell} EGP', Icons.brightness_high)),
               ],
             );
           }
