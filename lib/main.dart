@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:truce/core/di/injection.dart' as di;
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
@@ -10,12 +9,6 @@ import 'package:truce/features/prices/presentation/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Using legacy anon key to ensure maximum compatibility with existing headers/filters
-  await Supabase.initialize(
-    url: 'https://mgqcolwglaavwazjwjir.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncWNvbHdnbGFhdndhemp3amlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NzM0MTUsImV4cCI6MjA5MjM0OTQxNX0.V_Y6Of9rIPqwHCanKgpYNRcFAOWClfFiSPgG5MUF1VM',
-  );
 
   await di.init();
 

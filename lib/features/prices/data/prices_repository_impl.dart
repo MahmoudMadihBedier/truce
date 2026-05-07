@@ -5,12 +5,11 @@ import 'package:truce/core/utils/typedefs.dart';
 import 'package:truce/core/utils/constants.dart';
 import 'package:truce/features/prices/domain/models.dart';
 import 'package:truce/features/prices/domain/prices_repository.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PricesRepositoryImpl implements PricesRepository {
   final http.Client _httpClient = http.Client();
 
-  PricesRepositoryImpl(SupabaseClient client);
+  PricesRepositoryImpl();
 
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
@@ -57,13 +56,11 @@ class PricesRepositoryImpl implements PricesRepository {
 
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
-    // Return empty as requested to focus on the provided APIs
     return (null, <GoldPrice>[]);
   }
 
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
-    // Return empty as requested to focus on the provided APIs
     return (null, <CurrencyRate>[]);
   }
 }

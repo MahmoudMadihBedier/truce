@@ -7,4 +7,5 @@ abstract class AuthRepository {
   Future<ApiResult<void>> signInAsGuest();
   Future<ApiResult<void>> signOut();
   bool get isAuthenticated;
+  String? get currentUserId;
 }

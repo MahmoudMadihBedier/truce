@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as sb;
 import 'package:truce/features/auth/domain/auth_repository.dart';
 
 sealed class AuthState {
@@ -16,16 +15,16 @@ class AuthLoading extends AuthState {
 }
 
 class AuthAuthenticated extends AuthState {
-  final sb.User user;
-  const AuthAuthenticated(this.user);
+  final String userId;
+  const AuthAuthenticated(this.userId);
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AuthAuthenticated && user.id == other.user.id;
+      other is AuthAuthenticated && userId == other.userId;
 
   @override
-  int get hashCode => user.id.hashCode;
+  int get hashCode => userId.hashCode;
 }
 
 class AuthGuest extends AuthState {
@@ -56,30 +55,15 @@ class AuthError extends AuthState {
 
 class AuthCubit extends Cubit<AuthState> {
   final AuthRepository _repository;
-  final sb.SupabaseClient _client;
-  late final StreamSubscription<sb.AuthState> _authSubscription;
 
-  AuthCubit(this._repository, this._client) : super(const AuthInitial()) {
+  AuthCubit(this._repository) : super(const AuthInitial()) {
     _init();
   }
 
   void _init() {
-    _authSubscription = _client.auth.onAuthStateChange.listen((data) {
-      final session = data.session;
-      if (session != null) {
-        if (state is! AuthAuthenticated || (state as AuthAuthenticated).user.id != session.user.id) {
-          emit(AuthAuthenticated(session.user));
-        }
-      } else {
-        if (state is! AuthGuest && state is! AuthUnauthenticated && state is! AuthInitial) {
-           emit(const AuthUnauthenticated());
-        }
-      }
-    });
-
-    final currentUser = _client.auth.currentUser;
-    if (currentUser != null) {
-      emit(AuthAuthenticated(currentUser));
+    final userId = _repository.currentUserId;
+    if (_repository.isAuthenticated && userId != null) {
+      emit(AuthAuthenticated(userId));
     } else {
       emit(const AuthUnauthenticated());
     }
@@ -88,7 +72,10 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signIn(String email, String password) async {
     emit(const AuthLoading());
     final (failure, _) = await _repository.signInWithEmail(email, password);
-    if (failure != null) {
+    if (failure == null) {
+      final userId = _repository.currentUserId;
+      emit(AuthAuthenticated(userId ?? 'user'));
+    } else {
       emit(AuthError(failure.message));
     }
   }
@@ -96,7 +83,10 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signUp(String email, String password) async {
     emit(const AuthLoading());
     final (failure, _) = await _repository.signUpWithEmail(email, password);
-    if (failure != null) {
+    if (failure == null) {
+      final userId = _repository.currentUserId;
+      emit(AuthAuthenticated(userId ?? 'user'));
+    } else {
       emit(AuthError(failure.message));
     }
   }
@@ -104,7 +94,7 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> continueAsGuest() async {
     emit(const AuthLoading());
     final (failure, _) = await _repository.signInAsGuest();
-    if (failure != null) {
+    if (failure == null) {
       emit(const AuthGuest());
     }
   }
@@ -112,7 +102,10 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> signInWithGoogle() async {
     emit(const AuthLoading());
     final (failure, _) = await _repository.signInWithGoogle();
-    if (failure != null) {
+    if (failure == null) {
+      final userId = _repository.currentUserId;
+      emit(AuthAuthenticated(userId ?? 'google_user'));
+    } else {
       emit(AuthError(failure.message));
     }
   }
@@ -121,11 +114,5 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     await _repository.signOut();
     emit(const AuthUnauthenticated());
-  }
-
-  @override
-  Future<void> close() {
-    _authSubscription.cancel();
-    return super.close();
   }
 }

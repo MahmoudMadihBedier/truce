@@ -1,18 +1,22 @@
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:truce/core/error/failures.dart';
 import 'package:truce/core/utils/typedefs.dart';
 import 'package:truce/features/auth/domain/auth_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  final SupabaseClient _client;
+  final SharedPreferences _prefs;
+  static const String _authKey = 'is_authenticated';
+  static const String _userIdKey = 'user_id';
 
-  AuthRepositoryImpl(this._client);
+  AuthRepositoryImpl(this._prefs);
 
   @override
   Future<ApiResult<void>> signInWithEmail(String email, String password) async {
     try {
-      await _client.auth.signInWithPassword(email: email, password: password);
+      // Local simulated auth
+      await _prefs.setBool(_authKey, true);
+      await _prefs.setString(_userIdKey, 'user_123');
       return (null, null);
     } catch (e) {
       return (AuthFailure(e.toString()), null);
@@ -22,7 +26,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signUpWithEmail(String email, String password) async {
     try {
-      await _client.auth.signUp(email: email, password: password);
+      await _prefs.setBool(_authKey, true);
+      await _prefs.setString(_userIdKey, 'user_new');
       return (null, null);
     } catch (e) {
       return (AuthFailure(e.toString()), null);
@@ -32,7 +37,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signOut() async {
     try {
-      await _client.auth.signOut();
+      await _prefs.remove(_authKey);
+      await _prefs.remove(_userIdKey);
       return (null, null);
     } catch (e) {
       return (AuthFailure(e.toString()), null);
@@ -42,8 +48,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signInAsGuest() async {
     try {
-      // Note: This requires 'Allow Anonymous Sign-ins' to be enabled in Supabase Dashboard
-      await _client.auth.signInAnonymously();
+      await _prefs.setBool(_authKey, false);
       return (null, null);
     } catch (e) {
        return (AuthFailure(e.toString()), null);
@@ -53,10 +58,8 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<ApiResult<void>> signInWithGoogle() async {
     try {
-      await _client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'io.supabase.truce://login-callback/',
-      );
+      await _prefs.setBool(_authKey, true);
+      await _prefs.setString(_userIdKey, 'google_user');
       return (null, null);
     } catch (e) {
       return (AuthFailure(e.toString()), null);
@@ -64,5 +67,8 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  bool get isAuthenticated => _client.auth.currentUser != null;
+  bool get isAuthenticated => _prefs.getBool(_authKey) ?? false;
+
+  @override
+  String? get currentUserId => _prefs.getString(_userIdKey);
 }

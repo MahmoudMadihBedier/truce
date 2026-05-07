@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:truce/core/error/failures.dart';
 import 'package:truce/core/utils/typedefs.dart';
 import 'package:truce/core/utils/constants.dart';
@@ -8,10 +7,9 @@ import 'package:truce/features/coupons/domain/models.dart';
 import 'package:truce/features/coupons/domain/coupons_repository.dart';
 
 class CouponsRepositoryImpl implements CouponsRepository {
-  final SupabaseClient _client;
   final http.Client _httpClient = http.Client();
 
-  CouponsRepositoryImpl(this._client);
+  CouponsRepositoryImpl();
 
   @override
   Future<ApiResult<List<Coupon>>> getCoupons() async {
@@ -33,9 +31,7 @@ class CouponsRepositoryImpl implements CouponsRepository {
         }).toList());
       }
 
-      final supabaseResponse = await _client.from('coupons').select('*, stores(name_en, name_ar)');
-      final supabaseData = supabaseResponse as List<dynamic>;
-      return (null, supabaseData.map((item) => Coupon.fromJson(item)).toList());
+      return (const ServerFailure('No coupons available'), null);
     } catch (e) {
       return (ServerFailure(e.toString()), null);
     }

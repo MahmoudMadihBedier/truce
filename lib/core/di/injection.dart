@@ -1,6 +1,5 @@
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:truce/features/auth/data/auth_repository_impl.dart';
 import 'package:truce/features/auth/domain/auth_repository.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
@@ -18,10 +17,6 @@ Future<void> init() async {
   final prefs = await SharedPreferences.getInstance();
   sl.registerLazySingleton(() => prefs);
 
-  // Supabase
-  final supabase = Supabase.instance.client;
-  sl.registerLazySingleton(() => supabase);
-
   // Features
   _initAuth();
   _initPrices();
@@ -31,16 +26,16 @@ Future<void> init() async {
 
 void _initAuth() {
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(sl()));
-  sl.registerFactory(() => AuthCubit(sl(), sl()));
+  sl.registerFactory(() => AuthCubit(sl()));
 }
 
 void _initPrices() {
-  sl.registerLazySingleton<PricesRepository>(() => PricesRepositoryImpl(sl()));
+  sl.registerLazySingleton<PricesRepository>(() => PricesRepositoryImpl());
   sl.registerFactory(() => PricesCubit(sl()));
 }
 
 void _initCoupons() {
-  sl.registerLazySingleton<CouponsRepository>(() => CouponsRepositoryImpl(sl()));
+  sl.registerLazySingleton<CouponsRepository>(() => CouponsRepositoryImpl());
 }
 
 void _initSettings() {
