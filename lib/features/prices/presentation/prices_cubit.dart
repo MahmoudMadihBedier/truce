@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:truce/features/prices/domain/models.dart';
 import 'package:truce/features/prices/domain/prices_repository.dart';
@@ -44,6 +45,7 @@ class PricesError extends PricesState {
 
 class PricesCubit extends Cubit<PricesState> {
   final PricesRepository _repository;
+  Timer? _searchDebounce;
 
   PricesCubit(this._repository) : super(PricesInitial());
 
@@ -96,15 +98,26 @@ class PricesCubit extends Cubit<PricesState> {
     await loadDashboard(categoryId: id);
   }
 
-  Future<void> searchProducts(String query) async {
-    final currentState = state;
-    if (currentState is PricesLoaded) {
-      emit(PricesLoading());
-      final prodRes = await _repository.getProducts(query: query);
-      emit(currentState.copyWith(
-        products: prodRes.$2 ?? [],
-        clearCategory: true
-      ));
-    }
+  void searchProducts(String query) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final currentState = state;
+      if (currentState is PricesLoaded) {
+        emit(PricesLoading());
+        final prodRes = await _repository.getProducts(query: query);
+        if (!isClosed) {
+          emit(currentState.copyWith(
+            products: prodRes.$2 ?? [],
+            clearCategory: true
+          ));
+        }
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _searchDebounce?.cancel();
+    return super.close();
   }
 }

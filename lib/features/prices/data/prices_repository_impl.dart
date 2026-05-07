@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:truce/core/error/failures.dart';
 import 'package:truce/core/utils/typedefs.dart';
+import 'package:truce/core/utils/constants.dart';
 import 'package:truce/features/prices/domain/models.dart';
 import 'package:truce/features/prices/domain/prices_repository.dart';
 
@@ -10,26 +11,21 @@ class PricesRepositoryImpl implements PricesRepository {
   final SupabaseClient _client;
   final http.Client _httpClient = http.Client();
 
-  // Base URL for the Python Backend
-  static const String _baseUrl = 'http://localhost:8000';
-
   PricesRepositoryImpl(this._client);
 
   @override
   Future<ApiResult<List<Product>>> getProducts({String? query, int? categoryId}) async {
     try {
       if (query == null || query.isEmpty) {
-        // Return popular items from Supabase if no search query
-        // or a default search from the backend
         query = 'Milk';
       }
 
-      final uri = Uri.parse('$_baseUrl/search').replace(queryParameters: {'q': query});
+      final uri = Uri.parse('${Constants.apiBaseUrl}/search').replace(queryParameters: {'q': query});
 
       final response = await _httpClient.get(
         uri,
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 60)); // Scrapers can take time
+      ).timeout(const Duration(seconds: Constants.scraperTimeoutSeconds));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = json.decode(response.body);
@@ -58,7 +54,8 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
     try {
-      final response = await _httpClient.get(Uri.parse('$_baseUrl/gold'));
+      final response = await _httpClient.get(Uri.parse('${Constants.apiBaseUrl}/gold'))
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return (null, data.map((g) => GoldPrice(
@@ -77,7 +74,8 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
     try {
-      final response = await _httpClient.get(Uri.parse('$_baseUrl/currency'));
+      final response = await _httpClient.get(Uri.parse('${Constants.apiBaseUrl}/currency'))
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return (null, data.map((c) => CurrencyRate(

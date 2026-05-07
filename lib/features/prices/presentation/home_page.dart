@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:truce/core/utils/local_strings.dart';
 import 'package:truce/core/utils/marquee_ticker.dart';
-
 import 'package:truce/core/utils/theme.dart';
 import 'package:truce/features/auth/presentation/auth_cubit.dart';
 import 'package:truce/features/auth/presentation/auth_dialog.dart';
@@ -79,18 +78,28 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   const _HomeContent();
+
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  @override
+  void initState() {
+    super.initState();
+    final pricesCubit = context.read<PricesCubit>();
+    if (pricesCubit.state is PricesInitial) {
+      pricesCubit.loadDashboard();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final locale = context.watch<SettingsCubit>().state.locale.languageCode;
     return BlocBuilder<PricesCubit, PricesState>(
       builder: (context, state) {
-        if (state is PricesInitial) {
-          context.read<PricesCubit>().loadDashboard();
-        }
-
         return RefreshIndicator(
           onRefresh: () => context.read<PricesCubit>().loadDashboard(
             categoryId: state is PricesLoaded ? state.selectedCategoryId : null
@@ -158,7 +167,7 @@ class _HomeContent extends StatelessWidget {
                             label: Text(isAll ? (locale == 'ar' ? 'عروض مصر' : 'Egypt Deals') : (locale == 'ar' ? state.categories[index - 1].nameAr : state.categories[index - 1].nameEn)),
                             selected: isSelected,
                             onSelected: (_) => context.read<PricesCubit>().selectCategory(isAll ? null : state.categories[index - 1].id),
-                            selectedColor: TruceTheme.accentGreen.withOpacity(0.2),
+                            selectedColor: TruceTheme.accentGreen.withValues(alpha: 0.2),
                             labelStyle: TextStyle(
                               color: isSelected ? TruceTheme.accentGreen : Colors.black87,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
@@ -228,7 +237,7 @@ class _SearchContent extends StatelessWidget {
                       return ListTile(
                         leading: p.imageUrl != null ? Image.network(p.imageUrl!, width: 50) : null,
                         title: Text(locale == 'ar' ? p.nameAr : p.nameEn),
-                        subtitle: Text('EGP ${p.prices.first.price}'),
+                        subtitle: Text('EGP ${p.prices.isNotEmpty ? p.prices.first.price : 0.0}'),
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetailsPage(product: p))),
                       );
                     },
@@ -261,7 +270,7 @@ class _ProductCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +328,7 @@ class _ProductCard extends StatelessWidget {
                         Container(
                           margin: const EdgeInsets.only(top: 2),
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                          decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                           child: Text(
                             '+${product.prices.length - 1} ${LocalStrings.get('other_stores', locale)}',
                             style: const TextStyle(color: Colors.orange, fontSize: 7, fontWeight: FontWeight.bold),

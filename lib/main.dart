@@ -11,11 +11,10 @@ import 'package:truce/features/prices/presentation/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Suppress specific library warnings if needed, or keep for debugging
-
+  // Using legacy anon key to ensure maximum compatibility with existing headers/filters
   await Supabase.initialize(
     url: 'https://mgqcolwglaavwazjwjir.supabase.co',
-    anonKey: 'sb_publishable_52t3OZTL4k39wQf8DfrH_g_X7n73_vE',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ncWNvbHdnbGFhdndhemp3amlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NzM0MTUsImV4cCI6MjA5MjM0OTQxNX0.V_Y6Of9rIPqwHCanKgpYNRcFAOWClfFiSPgG5MUF1VM',
   );
 
   await di.init();
