@@ -18,19 +18,15 @@ class Product {
   factory Product.fromJson(Map<String, dynamic> json) {
     List<ProductPrice> parsedPrices = [];
 
-    // Check if it's a grouped product or a flat scraper result
-    if (json['Other Stores'] != null) {
-      parsedPrices = (json['Other Stores'] as List).map((p) => ProductPrice.fromJson(p)).toList();
-    } else {
-      parsedPrices = [ProductPrice.fromJson(json)];
-    }
+    // The new API response is flat per product/store combo
+    parsedPrices = [ProductPrice.fromJson(json)];
 
     return Product(
       id: json['Product ID']?.toString() ?? json['Sr No']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
       nameEn: json['Product Name'] ?? 'Product',
       nameAr: json['Product Name'] ?? 'منتج',
       descriptionEn: json['Description'],
-      imageUrl: json['Product Image URL'],
+      imageUrl: json['Product Image URL'] == 'N/A' ? null : json['Product Image URL'],
       prices: parsedPrices,
     );
   }
@@ -63,11 +59,11 @@ class ProductPrice {
     return ProductPrice(
       price: priceValue,
       mrp: mrpValue,
-      discountPercent: (json['Discount %'] ?? json['Discount'] ?? '0').toString(),
-      storeNameEn: json['Store'] ?? json['Store Name'] ?? 'Market',
-      storeRating: (json['Rating'] is num ? (json['Rating'] as num).toDouble() : 4.5),
-      productUrl: json['Product URL'] ?? json['URL'],
-      location: json['Location'] ?? (json['Store'] != null ? 'Egypt' : null),
+      discountPercent: (json['Discount %'] ?? '0').toString(),
+      storeNameEn: json['Store Name'] ?? 'Market',
+      storeRating: 4.5, // Default rating for new API
+      productUrl: json['Product URL'] == 'N/A' ? null : json['Product URL'],
+      location: json['Location'],
     );
   }
 }
