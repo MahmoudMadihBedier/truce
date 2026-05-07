@@ -25,7 +25,7 @@ class PricesRepositoryImpl implements PricesRepository {
       final response = await _httpClient.get(
         uri,
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 60));
+      ).timeout(const Duration(seconds: Constants.scraperTimeoutSeconds));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = json.decode(response.body);
@@ -54,7 +54,8 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<GoldPrice>>> getGoldPrices() async {
     try {
-      final response = await _httpClient.get(Uri.parse('${Constants.apiBaseUrl}/gold'));
+      final response = await _httpClient.get(Uri.parse('${Constants.apiBaseUrl}/gold'))
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return (null, data.map((g) => GoldPrice(
@@ -73,7 +74,8 @@ class PricesRepositoryImpl implements PricesRepository {
   @override
   Future<ApiResult<List<CurrencyRate>>> getCurrencyRates() async {
     try {
-      final response = await _httpClient.get(Uri.parse('${Constants.apiBaseUrl}/currency'));
+      final response = await _httpClient.get(Uri.parse('${Constants.apiBaseUrl}/currency'))
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return (null, data.map((c) => CurrencyRate(

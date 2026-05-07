@@ -97,16 +97,16 @@ class ProductDetailsPage extends StatelessWidget {
   }
 
   Widget _buildStorePriceTile(BuildContext context, ProductPrice price, String locale) {
-    final isLowest = price == product.prices.first;
+    final isLowest = product.prices.isNotEmpty && price == product.prices.first;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isLowest ? TruceTheme.accentGreen : Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: isLowest ? TruceTheme.accentGreen : Colors.grey.withValues(alpha: 0.2)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 5))
         ],
       ),
       child: Row(
